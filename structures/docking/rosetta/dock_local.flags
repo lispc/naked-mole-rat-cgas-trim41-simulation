@@ -1,0 +1,19 @@
+# Rosetta Local Docking Refinement
+# Starting from LightDock best_pose
+
+-s input.pdb
+-docking:partners A_B
+-docking:local_refine
+
+# Output
+-nstruct 10
+-out:file:scorefile local_refine.sc
+-out:path:all output_local
+
+# General
+-ignore_unrecognized_res
+-ex1
+-ex2aro
+
+# Use multiple CPUs
+-multiprocessing:total_jobs 1
