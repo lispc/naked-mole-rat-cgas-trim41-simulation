@@ -306,7 +306,19 @@ tail -f data/md_runs/Hgal_domain/monitor.log  # 查看自动监控
 - 4 个点突变对几何影响极小（<0.3Å）
 - 需要重新审视论文机制论述
 
-### 8.5 对项目的影响
+### 8.5 嵌合体实验设计（路径 B）
+
+基于序列对齐发现 Hsap 463 的真正同源位点是 Hgal 495（偏移 32 位）。Hgal 的紧凑几何来自**额外的 S463 位点**通过长 loop 靠近其他位点。
+
+设计 4 个嵌合体验证 loop 假设：
+- Chimera1: Hsap 1-462 + Hgal 463-554
+- Chimera2: Hgal 1-462 + Hsap 463-522
+- Chimera3: Hsap + Hgal loop 462-494 插入
+- Chimera4: Hgal - loop 462-494 删除
+
+序列：`sequences/chimeras.fasta`
+
+### 8.6 对项目的影响
 
 ✅ **仍然有效**：
 - Hgal 紧凑几何是真实的 → MD 数据有效
@@ -314,12 +326,16 @@ tail -f data/md_runs/Hgal_domain/monitor.log  # 查看自动监控
 - TRIM41 可同时接触 Hgal 全部 4 个位点 → 功能解释仍成立
 
 ❌ **需要修正**：
-- 论文 Discussion：从"突变聚集位点"改为"物种特异性结构差异"
-- 不再声称"4 个突变是充分条件"
+- 论文 Discussion：从"突变聚集位点"改为"额外位点 + 长 loop 机制"
+- 4 个点突变不改变几何（已验证）
+
+🔍 **新发现**：
+- 论文中 C463S 的编号映射存在偏移（真正的同源是 C495）
+- Hgal 的 S463 是额外位点，不是 Hsap C463 的同源位点
 
 详见：`docs/af3_mutation_analysis.md`
 
 ---
 
-*最后更新：2026-04-23 ( AF3 突变验证完成，重大假说修正 )*
+*最后更新：2026-04-23 ( AF3 突变验证完成，嵌合体序列已生成 )*
 *维护者：Kimi Code CLI*
