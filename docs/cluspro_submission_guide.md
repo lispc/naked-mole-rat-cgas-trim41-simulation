@@ -79,14 +79,20 @@ SPRY 域的表面残基（基于 UniProt 和结构预测推断）：
 
 ## 已准备好的提交文件
 
-文件位置：`structures/af3_raw/job4_Hgal_4mut_rev/`
+所有 4 个 AF3 job 已处理完毕，每个目录下均有以下文件：
 
-| 文件名 | 内容 | 用途 |
-|--------|------|------|
-| `cgas_fixed.pdb` | cGAS 单体（加氢、补全缺失原子）| 全长对接 |
-| `trim41_fixed.pdb` | TRIM41 单体（加氢、补全缺失原子）| 全长对接 |
-| `cgas_CT_200-554.pdb` | cGAS C-端域截取 | 结构域对接 |
-| `trim41_SPRY_413-630.pdb` | TRIM41 SPRY 域截取 | 结构域对接 |
+| 文件 | 内容 | 用途 |
+|------|------|------|
+| `cgas_fixed.pdb` | cGAS 单体（PDBFixer 加氢补全）| 全长对接 |
+| `trim41_fixed.pdb` | TRIM41 单体（PDBFixer 加氢补全）| 全长对接 |
+| `cgas_CT_200-554.pdb` | cGAS C-端域 (200-554) | 结构域对接 |
+| `trim41_SPRY_413-630.pdb` | TRIM41 SPRY 域 (413-630) | 结构域对接 |
+
+**文件位置**：
+- Job 1: `structures/af3_raw/job1_Hsap_WT/`
+- Job 2: `structures/af3_raw/job2_Hsap_4mut/`
+- Job 3: `structures/af3_raw/job3_Hgal_WT/`
+- Job 4: `structures/af3_raw/job4_Hgal_4mut_rev/`
 
 ---
 
@@ -140,29 +146,61 @@ SPRY 域的表面残基（基于 UniProt 和结构预测推断）：
 
 ---
 
-## 需要提交的 Job 列表
+## 需要提交的 Job 列表（全部 6 个，现在都可提交）
 
-### 现在就可以提交的（job4 AF3 结果已处理完毕）
+### 全长对接（4 个 Job）
 
-| Job | Receptor | Ligand | cGAS 活性残基 | 状态 |
-|-----|----------|--------|--------------|------|
-| A | TRIM41_WT_full (630 aa) | Hgal_cGAS_4mut_rev_full (554 aa) | 463, 511, 527, 530 | **🟢 现在可提交** |
-| B | TRIM41_SPRY_413-630 (218 aa) | Hgal_cGAS_CT_200-554 (355 aa) | 463, 511, 527, 530 | **🟢 现在可提交** |
+| Job | 受体 | 配体 | cGAS 活性残基 | PDB 路径 | 状态 |
+|-----|------|------|--------------|----------|------|
+| A | TRIM41_WT_full | Hsap_cGAS_WT_full (522 aa) | 463, 479, 495, 498 | `job1_Hsap_WT/` | **🟢 现在可提交** |
+| B | TRIM41_WT_full | Hsap_cGAS_4mut_full (522 aa) | 463, 479, 495, 498 | `job2_Hsap_4mut/` | **🟢 现在可提交** |
+| C | TRIM41_WT_full | Hgal_cGAS_WT_full (554 aa) | 463, 511, 527, 530 | `job3_Hgal_WT/` | **🟢 现在可提交** |
+| D | TRIM41_WT_full | Hgal_cGAS_4mut_rev_full (554 aa) | 463, 511, 527, 530 | `job4_Hgal_4mut_rev/` | **🟢 现在可提交** |
 
-### 等其余 3 个 AF3 job 完成后提交
+### 结构域对接（2 个 Job）
 
-| Job | Receptor | Ligand | cGAS 活性残基 | 状态 |
-|-----|----------|--------|--------------|------|
-| C | TRIM41_WT_full | Hsap_cGAS_WT_full (522 aa) | 463, 479, 495, 498 | 🟡 等待 job1 |
-| D | TRIM41_WT_full | Hsap_cGAS_4mut_full (522 aa) | 463, 479, 495, 498 | 🟡 等待 job2 |
-| E | TRIM41_WT_full | Hgal_cGAS_WT_full (554 aa) | 463, 511, 527, 530 | 🟡 等待 job3 |
-| F | TRIM41_SPRY | Hsap_cGAS_CT | 463, 479, 495, 498 | 🟡 等待 job1/2 |
+| Job | 受体 | 配体 | cGAS 活性残基 | PDB 路径 | 状态 |
+|-----|------|------|--------------|----------|------|
+| E | TRIM41_SPRY (218 aa) | Hsap_cGAS_CT (323 aa) | 463, 479, 495, 498 | `job1_Hsap_WT/` 或 `job2_Hsap_4mut/` | **🟢 现在可提交** |
+| F | TRIM41_SPRY (218 aa) | Hgal_cGAS_CT (355 aa) | 463, 511, 527, 530 | `job3_Hgal_WT/` 或 `job4_Hgal_4mut_rev/` | **🟢 现在可提交** |
+
+**注意**：
+- 截断 PDB 保留原始编号，活性残基编号与全长**完全相同**
+- TRIM41 全长/截断在所有 job 中序列相同（WT），因此 TRIM41 文件可复用
+- Hsap 的 cGAS CTD 为 323 aa（200-522），Hgal 的为 355 aa（200-554）
 
 ---
 
-## 现在就可以提交的 2 个 Job（详细步骤）
+## 6 个 Job 的详细提交参数
 
-### Job A: Hgal_cGAS_4mut_rev (全长) + TRIM41_WT (全长)
+### Job A: Hsap_cGAS_WT (全长) + TRIM41_WT (全长)
+
+| 参数 | 值 |
+|------|-----|
+| Receptor PDB | `structures/af3_raw/job1_Hsap_WT/trim41_fixed.pdb` |
+| Ligand PDB | `structures/af3_raw/job1_Hsap_WT/cgas_fixed.pdb` |
+| Ligand Active Residues | 463, 479, 495, 498 |
+| Scoring mode | Attraction |
+
+### Job B: Hsap_cGAS_4mut (全长) + TRIM41_WT (全长)
+
+| 参数 | 值 |
+|------|-----|
+| Receptor PDB | `structures/af3_raw/job2_Hsap_4mut/trim41_fixed.pdb` |
+| Ligand PDB | `structures/af3_raw/job2_Hsap_4mut/cgas_fixed.pdb` |
+| Ligand Active Residues | 463, 479, 495, 498 |
+| Scoring mode | Attraction |
+
+### Job C: Hgal_cGAS_WT (全长) + TRIM41_WT (全长)
+
+| 参数 | 值 |
+|------|-----|
+| Receptor PDB | `structures/af3_raw/job3_Hgal_WT/trim41_fixed.pdb` |
+| Ligand PDB | `structures/af3_raw/job3_Hgal_WT/cgas_fixed.pdb` |
+| Ligand Active Residues | 463, 511, 527, 530 |
+| Scoring mode | Attraction |
+
+### Job D: Hgal_cGAS_4mut_rev (全长) + TRIM41_WT (全长)
 
 | 参数 | 值 |
 |------|-----|
@@ -171,16 +209,23 @@ SPRY 域的表面残基（基于 UniProt 和结构预测推断）：
 | Ligand Active Residues | 463, 511, 527, 530 |
 | Scoring mode | Attraction |
 
-### Job B: Hgal_cGAS_CT (截断) + TRIM41_SPRY (截断)
+### Job E: Hsap_cGAS_CT (截断) + TRIM41_SPRY (截断)
 
 | 参数 | 值 |
 |------|-----|
-| Receptor PDB | `structures/af3_raw/job4_Hgal_4mut_rev/trim41_SPRY_413-630.pdb` |
-| Ligand PDB | `structures/af3_raw/job4_Hgal_4mut_rev/cgas_CT_200-554.pdb` |
-| Ligand Active Residues | 463, 511, 527, 530 |
+| Receptor PDB | `structures/af3_raw/job1_Hsap_WT/trim41_SPRY_413-630.pdb` |
+| Ligand PDB | `structures/af3_raw/job1_Hsap_WT/cgas_CT_200-554.pdb` |
+| Ligand Active Residues | 463, 479, 495, 498 |
 | Scoring mode | Attraction |
 
-**注意**：两个 job 的活性残基编号完全相同（463, 511, 527, 530），因为截断 PDB 保留了原始编号。
+### Job F: Hgal_cGAS_CT (截断) + TRIM41_SPRY (截断)
+
+| 参数 | 值 |
+|------|-----|
+| Receptor PDB | `structures/af3_raw/job3_Hgal_WT/trim41_SPRY_413-630.pdb` |
+| Ligand PDB | `structures/af3_raw/job3_Hgal_WT/cgas_CT_200-554.pdb` |
+| Ligand Active Residues | 463, 511, 527, 530 |
+| Scoring mode | Attraction |
 
 ---
 
