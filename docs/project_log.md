@@ -458,5 +458,165 @@ relax -s input.pdb -nstruct 3 \
 
 ---
 
-*最后更新：2026-04-23 ( AF3 突变验证完成 + 嵌合体实验完成 + Rosetta docking Hgal/Human 完成 + Relax 运行中 + 3× RTX 3090 MD 运行中 )*
+## 十一、界面位置分析重大发现 (2026-04-23)
+
+### 11.1 Hgal best_pose 界面真相
+
+对 `data/md_runs/Hgal_domain/Hgal_domain_processed.pdb`（LightDock best_pose 经 tleap 处理）进行严格界面分析（5Å 截止）：
+
+| 项目 | 结果 |
+|------|------|
+| **实际界面 cGAS 残基** | **I213, R242, E247**（3个残基，全部在 N 端 200-250 区域） |
+| **实际界面 TRIM41 残基** | R571, L573, A598（3个残基） |
+| **"活性位点" 463** | 距最近 TRIM41 残基 **30.23Å** |
+| **"活性位点" 511** | 距最近 TRIM41 残基 **33.11Å** |
+| **"活性位点" 527** | 距最近 TRIM41 残基 **30.54Å** |
+| **"活性位点" 530** | 距最近 TRIM41 残基 **38.69Å** |
+
+**结论**：
+> LightDock "best_pose" 的界面在 **cGAS N 端 200-250 区域**，而非论文讨论的 C 端 463/511/527/530 区域。四个"活性位点"全部远离界面（30-39Å）。
+
+可视化图：
+- `figures/hgal_interface_overview.png` — 全复合物概览
+- `figures/hgal_interface_closeup.png` — 界面区域特写（红色=实际界面）
+- `figures/hgal_interface_active_site.png` — 活性位点特写（蓝色球=远离界面）
+
+### 11.2 对 Hgal MD 的影响
+
+**严重问题**：当前在 RTX 3090 上运行的 3× Hgal MD（Rep1/2/3），起始结构 `data/md_runs/Hgal_domain/Hgal_domain.prmtop` 基于 **错误的界面**。MD 模拟的是 cGAS N 端与 TRIM41 的相互作用，这与论文声称的 C 端 4 突变机制**无关**。
+
+**决策 needed**：
+1. 立即停止当前 MD（浪费 GPU 时间）
+2. 或者继续跑完（作为"cGAS-TRIM41 N端界面动力学"的独立数据），但需明确标注**非论文相关界面**
+3. 重新寻找正确的界面后，重建体系重新跑
+
+### 11.3 论文原文分析关键结论
+
+对 `main.pdf`（Science 原文，15页）进行完整文本提取：
+
+| 发现 | 结果 |
+|------|------|
+| 论文是否声称4个位点在TRIM41物理界面上 | **否** — 全文从未出现 "interface", "binding site", "contact"（蛋白质语境） |
+| 论文如何描述4个突变 | **功能性** — "weaken TRIM41-mediated ubiquitination" |
+| 论文有无结构生物学实验 | **无** — 无晶体学、无电镜、无NMR、无计算对接 |
+| 4个突变如何发现 | **功能筛选** — 从16aa逐步缩小到4aa，基于HR效率而非结构 |
+
+**关键修正**：
+> 我们之前所有计算工作（AF3、LightDock、Rosetta对接、活性位点间距分析）基于的隐含假设——"4个突变在TRIM41界面上"——**并非来自论文，而是我们自己的推断**。论文仅有功能证据（泛素化、P97相互作用），从未声称物理接触。
+
+### 11.4 新科学问题框架
+
+既然论文没有结构证据，计算模拟的真正价值在于**探索可能性空间**：
+
+```
+问题：4个C端突变如何影响TRIM41介导的泛素化？
+├── 可能性A：直接界面接触（但我们找不到 docking pose）
+├── 可能性B：变构效应 → 影响远端（如N端）界面区域
+├── 可能性C：改变表面特性 → 影响TRIM41底物识别
+├── 可能性D：改变泛素化位点（Lys）可及性
+└── 可能性E：4个突变只是标记，真正驱动力是物种特异性整体结构（如长loop）
+```
+
+**当前最高优先级子问题**：
+> cGAS N 端（200-250）是否是真正的 TRIM41 界面？4个 C 端突变是否通过变构效应影响该区域？
+
+### 11.5 下一步建议
+
+1. **确认 N 端界面的可靠性**
+   - LightDock 的 scoring function（fastdfire）是否在 N 端区域有 artifact？
+   - 用 Rosetta 重新对接，看看是否也收敛到 N 端界面
+   - 用 AF3 multimer 预测，尽管 ipTM 低，但可能提示正确区域
+
+2. **测试 C 端→N 端变构通路**
+   - 如果 N 端是真实界面，4mut 是否改变 N 端的动态/构象？
+   - 这需要正确的复合物结构作为 MD 起始点
+
+3. **文献调研**
+   - 引用 28（Z. Zhen et al.）中 TRIM41 如何识别 cGAS？
+   - cGAS 上的已知泛素化位点有哪些？
+   - TRIM41 的底物识别机制（SPRY domain vs RING domain）
+
+详见：`docs/paper_notes_cgas_trim41.md` 第 4 节（关键新发现）
+
+---
+
+## 十二、引用28分析 + cGAS 泛素化位点调研 (2026-04-23)
+
+### 12.1 引用28（Zhen et al., Nat Commun 2023）核心发现
+
+引用28是Science 2025的前期工作（同一课题组），首次报道cGAS-TRIM41相互作用。
+
+**关键发现**：
+- CHK2磷酸化cGAS的 **S120和S305** → 促进cGAS-TRIM41相互作用
+- cGAS作为"支架蛋白"促进TRIM41-ORF2p相互作用 → ORF2p被泛素化降解
+- **TRIM41的主要底物是ORF2p，不是cGAS**
+- TRIM41的 **coiled-coil domain** 对TRIM41-ORF2p相互作用必需
+
+**癌症相关cGAS突变分析**（影响cGAS-TRIM41相互作用）：
+- P486L, L377P, S345L, D408N, E383K 减少cGAS-TRIM41相互作用
+- E216D, F433L 减少cGAS-ORF2p相互作用
+- **所有突变位于N端/中间区域（216-486），没有任何突变>500**
+
+**对Science 2025的影响**：
+- 引用28的机制（TRIM41泛素化ORF2p）与Science 2025的机制（TRIM41泛素化cGAS）**是两个不同的功能**
+- 引用28没有提到C端463/511/527/530
+- 引用28的突变分析**支持N端/中间区域是cGAS-TRIM41相互作用的关键区域**
+
+详见：`docs/cite28_analysis.md`
+
+### 12.2 cGAS已知泛素化位点（UniProt Q8N884）
+
+| 位点 | E3连接酶 | 功能 | 到界面距离 |
+|------|---------|------|-----------|
+| Lys-414 | TRIM14/USP14轴 | K48-Ub, 稳定/降解调控 | **~6.7Å** |
+| Lys-427 | CRL5-SPSB3 | K48-Ub, 核降解 | **~13.8Å** |
+| Lys-173 | RNF185 | K27-Ub, 增强酶活性 | — |
+| Lys-347 | TRIM56 | mono-Ub, 寡聚化 | — |
+| Lys-411 | MARCHF8 | K63-Ub, 抑制免疫 | — |
+| **?** | **TRIM41** | **mono-Ub, 激活cGAS** | **位点未指定** |
+
+**关键发现**：
+- **TRIM41确实泛素化cGAS**（PubMed:29760876），但UniProt未注释具体位点
+- 距离docking界面最近的已知泛素化位点：**Lys-414**（6.7Å）和 **Lys-427**（13.8Å）
+- C端"活性位点"区域（453-531）内的Lys全部远离界面（>16Å）
+- 如果TRIM41在我们docking的N端界面上泛素化cGAS，**Lys-414是最可能的位点**
+
+详见：`docs/cite28_analysis.md` 第5-6节
+
+### 12.3 综合假说修正
+
+基于所有证据，最合理的机制假说：
+
+```
+Hgal 物种特异性长 loop → C端紧凑几何
+    ↓（变构效应）
+影响N端界面区域（~213-247）的表面特性
+    ↓
+改变TRIM41对cGAS的识别和/或Lys-414泛素化效率
+    ↓
+K48-泛素化水平变化 → P97提取 → 染色质滞留
+```
+
+### 12.4 PubMed:29760876 分析（Liu et al. 2018, Cell Biosci）
+
+> Liu ZS et al., "RINCK-mediated monoubiquitination of cGAS promotes antiviral innate immune responses"
+
+- **确认 TRIM41 介导 cGAS 的 monoubiquitination** — Western blot + Ub K0 + RING C20A 验证
+- **位点未定位** — 无 MS site mapping，无 K-to-R 扫描
+- 该论文研究**细胞质 cGAS 先天免疫**，Science 2025 研究**核 cGAS DNA修复** — 不同 context
+- 但共享核心：TRIM41 与 cGAS 相互作用，4mut 影响功能后果
+
+详见：`docs/cite28_analysis.md` 第6节
+
+### 12.5 下一步
+
+- [x] 确认PubMed:29760876中TRIM41泛素化cGAS的具体位点 → **已完成，位点未定位**
+- [ ] 安装Rosetta（本地），用Rosetta对接验证N端界面
+- [ ] 搜索TRIM41 SPRY domain底物识别机制文献
+- [ ] 明天检查3090上Hgal MD的初步结果
+- [ ] 预测TRIM41泛素化cGAS的最可能位点
+
+---
+
+*最后更新：2026-04-23 ( 引用28分析 + UniProt泛素化位点 + 假说修正 )*
 *维护者：Kimi Code CLI*

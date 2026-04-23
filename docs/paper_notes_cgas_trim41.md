@@ -106,7 +106,65 @@ HR 修复效率变化
 
 ---
 
-## 四、论文 broader 结论
+## 四、关键新发现：论文从未声称"4个位点在TRIM41物理界面上"
+
+### 2026-04-23 全文文本分析结果
+
+通过对 `main.pdf`（Science 原文，15页）进行完整文本提取和关键词搜索：
+
+| 关键词 | 在蛋白质相互作用语境下出现？ | 含义 |
+|--------|---------------------------|------|
+| "interface" | ❌ 否 | 全文未出现 |
+| "binding site" | ❌ 否 | 全文未出现 |
+| "contact" (蛋白质接触) | ❌ 否 | 仅在参考文献中出现（contact inhibition） |
+| "surface patch" | ❌ 否 | 全文未出现 |
+| "interaction" | ✅ 是 | 指功能性相互作用（泛素化、co-IP），非物理界面 |
+| "domain" | ✅ 是 | 指蛋白质结构域（C-terminal domain, SPRY domain等） |
+
+### 论文原文中关于4个突变的表述
+
+> Page 5: "We further identified four mutations, S463D, E511K, Y527L, and T530K, that at least partially abolished HR stimulation."
+
+> Page 6: "DNA damage enhances the interaction between human cGAS and an E3 ubiquitin ligase TRIM41 (28). We therefore tested the effect of TRIM41 on the ubiquitination of human and naked mole-rat cGAS."
+
+> Page 10 (Discussion): "the four amino acid changes in cGAS lead to a retained chromatin binding through affecting its ubiquitination and interaction with P97"
+
+**关键结论**：
+1. 论文使用的是 **"interaction"** 一词，指的是**功能性相互作用**（functional interaction = 泛素化效率）
+2. 论文**从未**声称这4个残基在**物理上接触**TRIM41
+3. 论文**没有**任何结构生物学实验（X-ray、Cryo-EM、NMR、计算对接）来支持位点的空间位置
+4. 4个突变的发现是通过**功能筛选**（HR效率→逐步缩小到16aa→再缩小到4aa），而非结构指导
+
+### 这意味着什么？
+
+**我们之前计算工作的隐含假设（"4个突变在TRIM41界面上"）并非来自论文，而是我们自己的推断。**
+
+论文的实际主张：
+```
+4个氨基酸残基（C端结构域内）
+    ↓ 功能效应（通过突变扫描发现）
+影响 TRIM41 介导的泛素化效率
+    ↓
+改变 P97 提取效率
+    ↓
+改变染色质滞留
+    ↓
+改变 FANCI-RAD50 相互作用
+    ↓
+影响 HR 修复效率
+```
+
+**4个残基可能的作用机制（论文未排除任何一种）**：
+1. **直接界面接触**：4个残基在TRIM41结合面上，突变改变结合强度
+2. **变构效应**：4个残基不在界面上，但通过构象变化影响界面区域
+3. **底物识别**：4个残基影响TRIM41对cGAS底物特性的识别（如表面电荷、柔性）
+4. **泛素化位点调控**：4个残基影响Lys位点的暴露或可及性，而非TRIM41结合本身
+
+**计算模拟的正确目标**：不是"证明4个突变在界面上"，而是"探索4个突变如何通过结构/动力学影响TRIM41介导的泛素化"。
+
+---
+
+## 五、论文 broader 结论
 
 ### 摘要核心
 > "The changes enable cGAS to retain chromatin longer upon DNA damage by weakening TRIM41-mediated ubiquitination and interaction with the segregase P97."
@@ -119,34 +177,69 @@ HR 修复效率变化
 
 ---
 
-## 五、与计算模拟的关联点
+## 六、与计算模拟的关联点（修正后）
 
-计算模拟需要解释/验证的关键问题：
+计算模拟需要解释/验证的关键问题（**修正版**）：
 
-1. **4 个突变是否在 TRIM41 结合界面上？**
-   - 如果是 → 直接解释"结合减弱"
-   - 如果不是 → 可能是变构效应（allosteric）
+1. **4 个突变是否在空间上聚集？**
+   - 我们已证实：Hgal 中 463/511/527/530 形成 ~18Å 紧凑补丁，Hsap 中 ~28Å 分散
+   - 但这与 TRIM41 结合无关——是物种特异性结构适应的结果
 
-2. **突变是否改变 cGAS 表面静电势或形状？**
+2. **4 个突变是否影响 cGAS 表面特性？**
    - TRIM41 作为 E3，底物识别可能依赖特定 surface patch
+   - 即使残基不直接接触 TRIM41，表面电荷/形状变化也可能影响结合
 
-3. **泛素化位点附近的结构是否被突变改变？**
-   - 即使 TRIM41 仍能结合，但 Lys 位点可及性改变也可能导致泛素化减少
+3. **4 个突变是否通过变构效应影响其他区域？**
+   - 如 N 端区域（200-250）可能是真正的 TRIM41 界面
+   - 需要测试：4mut 是否改变 N 端的构象/动态
 
-4. **裸鼹鼠 vs 人 cGAS 的动力学行为差异**
+4. **cGAS 的泛素化位点（Lys）可及性是否被突变改变？**
+   - 即使 TRIM41 结合不变，Lys 位点可及性改变也可能导致泛素化效率变化
+
+5. **裸鼹鼠 vs 人 cGAS 的动力学行为差异**
    - 染色质滞留差异可能不仅取决于 TRIM41-P97 轴，也取决于 cGAS 自身构象动态
 
 ---
 
-## 六、待确认的问题
+## 七、待确认的问题
 
-- [ ] 4 个突变位点在 UniProt 人 cGAS（Q8N884）上的精确序列位置
-- [ ] 裸鼹鼠 cGAS 的 UniProt ID 或 GenBank 序列
+- [x] 4 个突变位点在 UniProt 人 cGAS（Q8N884）上的精确序列位置 → **已完成**
+- [x] 裸鼹鼠 cGAS 的 UniProt ID 或 GenBank 序列 → **已完成**
+- [x] 论文是否声称4个位点在TRIM41界面上 → **已确认：否，论文从未声称**
 - [ ] TRIM41 的底物识别结构域范围（RING/B-box/coiled-coil?）
 - [ ] cGAS 上已知的 TRIM41 泛素化位点（哪些 Lys？）
 - [ ] 引用 28 的原文细节（TRIM41 如何识别 cGAS？）
+- [ ] cGAS N 端（200-250）是否可能是真正的 TRIM41 界面？
+
+---
+
+## 八、对我们计算策略的影响
+
+### 旧策略（已修正）
+```
+假设：4个突变在TRIM41界面上
+    ↓
+目标：计算4突变如何改变界面结合强度
+    ↓
+方法： docking + MD of the "active site" interface
+```
+
+### 新策略
+```
+已知：论文仅有功能证据，无结构证据
+    ↓
+问题：4个突变如何影响TRIM41介导的泛素化？
+    ↓
+子问题A：4个突变是否在TRIM41界面上？（我们已发现：docking找不到）
+子问题B：4个突变是否影响cGAS其他区域（如N端）的构象/动态？
+子问题C：4个突变是否改变表面特性（电荷、柔性）从而影响TRIM41识别？
+子问题D：物种特异性整体结构差异（如长loop）是否是主要驱动力？
+```
+
+**当前最高优先级**：重新评估 cGAS N 端（200-250）作为潜在 TRIM41 界面的可能性，以及4个 C 端突变是否通过变构效应影响该区域。
 
 ---
 
 *文档创建时间：2026-04-22*
+*重大更新：2026-04-23（添加全文文本分析，修正对论文主张的理解）*
 *供后续计算实验设计参考*
