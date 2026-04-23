@@ -1,0 +1,18 @@
+# Rosetta Global Docking
+# Compare with LightDock result
+
+-s input.pdb
+-docking:partners A_B
+
+# Output (small test run)
+-nstruct 10
+-out:file:scorefile global.sc
+-out:path:all output_global
+
+# General
+-ignore_unrecognized_res
+-ex1
+-ex2aro
+
+# Use multiple CPUs
+-multiprocessing:total_jobs 1

@@ -1,0 +1,11 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <ScoreFunction name="ref2015" weights="ref2015.wts" />
+    </SCOREFXNS>
+    <MOVERS>
+        <DockingProtocol name="dock" local_refine="true" />
+    </MOVERS>
+    <PROTOCOLS>
+        <Add mover="dock" />
+    </PROTOCOLS>
+</ROSETTASCRIPTS>
