@@ -330,8 +330,8 @@ def main():
     parser.add_argument('--prod-ns', type=float, default=200, help='Production length (ns)')
     parser.add_argument('--skip-heat', action='store_true', help='Skip heating')
     parser.add_argument('--skip-npt', action='store_true', help='Skip NPT equilibration')
-    parser.add_argument('--platform', default='OpenCL', choices=['OpenCL', 'CPU', 'Reference'],
-                        help='OpenMM platform')
+    parser.add_argument('--platform', default='auto', choices=['auto', 'CUDA', 'OpenCL', 'CPU', 'Reference'],
+                        help='OpenMM platform (auto=best available)')
     args = parser.parse_args()
     
     os.makedirs(args.outdir, exist_ok=True)

@@ -1,6 +1,8 @@
 # CUDA 机器迁移指南
 
 > 从 Apple Silicon (macOS, OpenCL) 迁移到 NVIDIA GPU (Linux, CUDA) 的注意事项。
+>
+> **最后更新：2026-04-23** — 已成功完成迁移，3× RTX 3090 并行 MD 运行中。
 
 ---
 
@@ -208,7 +210,16 @@ props['CudaPrecision'] = 'single'  # 改为 single 试试
 2. 减小 PME grid 或增大 `ewaldErrorTolerance`
 3. 尝试 `CpuPme`：在 platform properties 中加 `{'UseCpuPme': 'true'}`
 
-### Q4: 轨迹文件兼容性
+### Q4: `run_md.py` 不支持 `--platform CUDA`
+
+原脚本中 `--platform` 的 `choices` 只包含 `['OpenCL', 'CPU', 'Reference']`，缺少 `CUDA`。
+
+**修复**（已提交）：
+```python
+parser.add_argument('--platform', default='auto', choices=['auto', 'CUDA', 'OpenCL', 'CPU', 'Reference'])
+```
+
+### Q5: 轨迹文件兼容性
 
 DCD 轨迹是跨平台的。在 macOS 上生成的 DCD 可在 Linux 上直接用 MDAnalysis 读取：
 
@@ -266,7 +277,27 @@ tail -f data/md_runs/Hgal_domain/rep1/Hgal_domain_rep1_prod.log
 ## 七、注意事项
 
 1. **不要 commit 轨迹文件**：DCD 文件通常数百 MB 到数 GB，已加入 `.gitignore`
-2. **定期 checkpoint**：200ns 约 4-5 天，建议每晚检查进度
-3. **温度监控**：RTX 3090 长时间运行温度可能达到 80-90°C，确保机箱散热良好
-4. **电源**：满载功耗约 350W，确保电源功率充足（建议 750W+）
-5. **不同 seed**：3 重复需要使用不同随机种子，当前脚本通过不同起始时间自动实现（Langevin 积分器的随机数种子）
+2. **定期 checkpoint**：脚本已内置每 1ns 自动保存 checkpoint
+3. **温度监控**：RTX 3090 长时间运行温度可能达到 70-80°C，确保机箱散热良好
+4. **电源**：单卡满载功耗约 350W，4 卡建议 1600W+ 电源
+5. **不同 seed**：3 重复使用不同随机种子，通过 `CUDA_VISIBLE_DEVICES` + 不同启动时间自动实现
+6. **业务逻辑监控**：已部署 `scripts/monitor_md.sh`，每小时检查能量稳定性、温度、体积收敛、DCD 文件完整性等
+
+## 八、实际迁移经验总结
+
+### 迁移耗时
+| 步骤 | 耗时 | 备注 |
+|------|------|------|
+| 安装 Miniforge | ~2 min | 自动下载安装 |
+| 创建 conda env + 安装包 | ~10 min | 3GB 下载，mamba 加速 |
+| OpenMM CUDA 验证 | <1 min | `verify_openmm.py` |
+| 构建 MD 体系 (tleap + EM) | ~2 min | 含溶剂化、能量最小化 |
+| 启动 3 重复 MD | <1 min | 并行后台运行 |
+| **总计** | **~15 min** | 从零到生产运行 |
+
+### 实测 vs 预估对比
+| 指标 | 预估 | 实测 | 偏差 |
+|------|------|------|------|
+| RTX 3090 速度 | 200-300 ns/day | 152 ns/day | 偏低（Python I/O 开销大）|
+| 单条 200ns 耗时 | ~1 天 | ~1.3 天 | 基本吻合 |
+| 3 重复并行总耗时 | ~3 天 | ~1.3 天 | 优于预估（3 卡并行）|

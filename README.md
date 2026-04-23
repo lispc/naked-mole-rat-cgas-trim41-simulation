@@ -74,12 +74,12 @@
 
 ```bash
 # Conda base
-export CONDA_PATH="/Users/zhangzhuo/miniforge3"
+export CONDA_PATH="$HOME/miniforge3"
 source $CONDA_PATH/etc/profile.d/conda.sh
 
 # MD environment (OpenMM, AmberTools, analysis)
 conda activate cgas-md
-python --version  # Python 3.13.13
+python --version  # Python 3.11.15
 
 # Docking environment (LightDock)
 conda activate py311
@@ -115,9 +115,9 @@ python scripts/build_system.py \
 
 | Item | Path |
 |------|------|
-| Conda | `/Users/zhangzhuo/miniforge3/bin/conda` |
+| Conda | `~/miniforge3/bin/conda` |
 | Conda version | 26.1.1 |
-| Platform | osx-arm64 (Apple Silicon) |
+| Platform | linux-64 (x86_64, NVIDIA CUDA) |
 
 ### Conda Environments
 
@@ -125,8 +125,8 @@ python scripts/build_system.py \
 
 | Package | Version |
 |---------|---------|
-| Python | 3.13.13 |
-| OpenMM | 8.5.1 (conda-forge, apple build) |
+| Python | 3.11.15 |
+| OpenMM | 8.5.1 (conda-forge, CUDA build) |
 | AmberTools | 24.8 |
 | MDAnalysis | 2.10.0 |
 | MDTraj | 1.11.1 |
@@ -136,8 +136,9 @@ python scripts/build_system.py \
 | Seaborn | 0.13.2 |
 | Pandas | 2.3.3 |
 | Biopython | 1.87 |
+| OpenMMTools | 0.26.0 |
 
-Path: `/Users/zhangzhuo/miniforge3/envs/cgas-md/bin/python`
+Path: `~/miniforge3/envs/cgas-md/bin/python`
 
 #### `py311` — Protein Docking
 
@@ -168,12 +169,12 @@ Path: `/Users/zhangzhuo/miniforge3/envs/py311/bin/python`
 
 | Component | Specification |
 |-----------|--------------|
-| CPU | Apple M3 Pro (12-core) |
-| GPU | 18-core Apple Silicon GPU (via OpenCL) |
-| Memory | 36 GB unified memory |
-| OS | macOS 15.3 |
-| Backend | OpenCL (Metal unavailable on conda-forge osx-arm64) |
-| Performance | ~95 ns/day @ 80k atoms (domain-truncated) |
+| CPU | x86_64 server CPU |
+| GPU | 4× NVIDIA GeForce RTX 3090 (24GB VRAM each) |
+| Memory | Server RAM (充足) |
+| OS | Linux (CUDA 13.0) |
+| Backend | CUDA (mixed precision) |
+| Performance | ~152 ns/day @ 116k atoms (domain-truncated, 实测) |
 
 ## Citation
 

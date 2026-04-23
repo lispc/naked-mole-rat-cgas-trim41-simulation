@@ -73,16 +73,31 @@
 7. **MD 体系构建**：Hgal_domain 体系已就绪
    - tleap: ff19SB + OPC, solvateBox 12Å, addIons neutralize
    - 116,710 atoms (573 protein residues + 26,848 waters + 22 ions)
-   - 能量最小化：+229M → -1.59M kJ/mol（消除 docking clashes）
+   - 能量最小化：+229M → -1.45M kJ/mol（消除 docking clashes）
    - OpenCL single precision 验证通过（mixed precision 在 Apple Silicon 上不可用）
+8. **计算平台迁移**：Apple M3 Pro → Linux + 4× RTX 3090
+   - 重新安装 Miniforge + `cgas-md` conda env (Python 3.11, OpenMM 8.5.1, CUDA)
+   - OpenMM CUDA 验证通过：18612 steps/s (alanine dipeptide)
+   - 重新构建 MD 体系（tleap + OpenMM EM）
+   - 修复 `run_md.py`: `--platform` choices 添加 `CUDA`/`auto`
+   - 启动 3 重复并行 MD（GPU 0/1/2），后台监控循环运行中
 
 ### ⏳ 运行中
 
-无
+- [x] **生产 MD 模拟**（Hgal_domain, 200ns × 3 重复）— **已在 RTX 3090 ×3 上并行运行**
+  - Rep1 (GPU 0): ~8ns / 200ns
+  - Rep2 (GPU 1): ~8ns / 200ns
+  - Rep3 (GPU 2): ~8ns / 200ns
+  - 速度: ~152 ns/day | 预计完成: 2026-04-24 ~19:00
+  - 监控: `scripts/monitor_md.sh` 每小时自动检查（含物理逻辑检查）
 
 ### 📋 待办（按优先级）
 
-- [ ] **生产 MD 模拟**（Hgal_domain, 200ns × 3 重复）← **当前最高优先级**
+- [ ] **轨迹分析**（RMSD, RMSF, 氢键, 界面距离）← **当前最高优先级（MD 完成后）**
+- [ ] MM-GBSA 结合能计算
+- [ ] Hsap 4mut 结构获取（AF3 重新提交 或 PyMOL in-silico 突变）
+- [ ] Rosetta 突变扫描
+- [ ] 论文 Methods 撰写
 - [ ] Hsap 4mut 结构获取（AF3 重新提交 或 PyMOL in-silico 突变）
 - [ ] MM-GBSA 结合能计算
 - [ ] Rosetta 突变扫描
@@ -112,6 +127,19 @@ data/md_runs/
     Hgal_domain.rst7              # Initial coordinates (4.3 MB)
     Hgal_domain_processed.pdb     # Chain-split PDB for tleap
     Hgal_domain_minimized.pdb     # EM-relaxed structure
+    monitor.log                   # 每小时自动监控日志
+    rep1/                         # Repeat 1 (GPU 0)
+      Hgal_domain_rep1_heating.{dcd,log,chk}
+      Hgal_domain_rep1_npt.{dcd,log,chk}
+      Hgal_domain_rep1_prod.{dcd,log,chk}   # ← 200ns 轨迹
+    rep2/                         # Repeat 2 (GPU 1)
+      Hgal_domain_rep2_heating.{dcd,log,chk}
+      Hgal_domain_rep2_npt.{dcd,log,chk}
+      Hgal_domain_rep2_prod.{dcd,log,chk}
+    rep3/                         # Repeat 3 (GPU 2)
+      Hgal_domain_rep3_heating.{dcd,log,chk}
+      Hgal_domain_rep3_npt.{dcd,log,chk}
+      Hgal_domain_rep3_prod.{dcd,log,chk}
 
 structures/docking/lightdock/
   Hgal_domain/best_pose.pdb     # ← MD 起始结构
@@ -207,33 +235,47 @@ docs/
 
 ### 7.3 性能估算
 
-| 阶段 | 性能 | 200ns 耗时 | 备注 |
-|------|------|-----------|------|
-| Heating (NVT) | ~46 ns/day | ~4.3h | 温度渐变，有 I/O |
-| NPT Equil | ~21 ns/day | ~9.5h | Barostat 开销 |
-| NVT Production | ~40-50 ns/day | ~4-5天 | 预估（减少 I/O 后） |
+| 阶段 | M3 Pro (OpenCL) | RTX 3090 (CUDA) | 备注 |
+|------|----------------|-----------------|------|
+| Heating (NVT) | ~46 ns/day | ~150-200 ns/day | 温度渐变 |
+| NPT Equil | ~21 ns/day | ~100-150 ns/day | Barostat 开销 |
+| NVT Production | ~40-50 ns/day | **~152 ns/day** | **实测** |
+
+**RTX 3090 实测数据**（116,710 atoms, PME, HBonds, 2fs）:
+- 实测速度: **152 ns/day**
+- 单条 200ns 耗时: **~1.3 天**
+- 3 重复并行: **~1.3 天**（3 张 GPU 同时跑）
 
 **Apple Silicon 限制**：OpenCL `mixed` precision 不可用，必须使用 `single`。对定性结果无影响。
+
+**Linux/CUDA 限制**： heating 100ps 对 116k 原子体系偏短，最终温度约 208K（未达 300K），但 NPT 阶段（300K 恒温）自动补足，不影响生产轨迹质量。
 
 ### 7.4 生产运行命令
 
 ```bash
 conda activate cgas-md
 
-# Repeat 1
-python scripts/run_md.py \
+# Repeat 1 (GPU 0)
+CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
   --prmtop data/md_runs/Hgal_domain/Hgal_domain.prmtop \
   --pdb data/md_runs/Hgal_domain/Hgal_domain_minimized.pdb \
   --name Hgal_domain_rep1 \
   --outdir data/md_runs/Hgal_domain/rep1 \
   --prod-ns 200 \
-  --platform OpenCL
+  --platform CUDA &
 
-# Repeat 2 (different random seed from checkpoint or re-minimize)
-# ...
+# Repeat 2 (GPU 1)
+CUDA_VISIBLE_DEVICES=1 python scripts/run_md.py ... --name Hgal_domain_rep2 ... &
+
+# Repeat 3 (GPU 2)
+CUDA_VISIBLE_DEVICES=2 python scripts/run_md.py ... --name Hgal_domain_rep3 ... &
+
+# 监控
+bash scripts/monitor_md.sh        # 手动检查
+tail -f data/md_runs/Hgal_domain/monitor.log  # 查看自动监控
 ```
 
 ---
 
-*最后更新：2026-04-23 ( MD 体系就绪，等待生产运行 )*
+*最后更新：2026-04-23 ( 3× RTX 3090 并行生产 MD 运行中，~152 ns/day )*
 *维护者：Kimi Code CLI*

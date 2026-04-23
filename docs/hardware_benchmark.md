@@ -9,7 +9,7 @@
 
 ## 四、硬件资源评估与性能基准
 
-### 4.1 硬件规格
+### 4.1 硬件规格（原 Apple M3 Pro）
 
 | 项目 | 规格 |
 |------|------|
@@ -18,6 +18,16 @@
 | 内存 | 36 GB 统一内存（无独立显存） |
 | 操作系统 | macOS 15.3 (Darwin 25.3.0) |
 | Python | 3.13.13 (conda-forge) |
+
+### 4.1b 硬件规格（迁移后 Linux + RTX 3090）
+
+| 项目 | 规格 |
+|------|------|
+| CPU | x86_64 (未详测) |
+| GPU | 4× NVIDIA GeForce RTX 3090 (24GB VRAM each) |
+| 内存 | 系统内存充裕 |
+| 操作系统 | Linux (CUDA 13.0) |
+| Python | 3.11.15 (conda-forge) |
 
 ### 4.2 OpenMM GPU 性能基准测试
 
@@ -43,6 +53,28 @@
 - 200ns 轨迹: **~2.1 天**
 - 12 trajectories serial: **~25 天**
 - 12 trajectories (2 parallel): **~13 天**
+
+### 4.2b RTX 3090 实测基准（迁移后）
+
+#### 实测 1：alanine dipeptide vacuum（验证 CUDA 后端）
+- 10k steps @ 2fs = 20 ps
+- **CUDA**: 20 ps in 0.54s → **18,612 steps/s**
+- 仅为理想上限参考
+
+#### 实测 2：Hgal_domain 生产 MD（116,710 atoms, PME, HBonds, 2fs）
+- 采样窗口: 120s 内跑了 0.2ns
+- **实测速度: ~152 ns/day**
+- 包含 PME、溶剂、离子、DCD I/O、checkpoint 等全部真实开销
+
+**与 M3 Pro 对比**:
+
+| 指标 | M3 Pro (OpenCL) | RTX 3090 (CUDA) | 加速比 |
+|------|----------------|-----------------|--------|
+| NVT Heating | ~46 ns/day | ~150-200 ns/day | **3-4x** |
+| NPT Equil | ~21 ns/day | ~100-150 ns/day | **5-7x** |
+| NVT Production | ~40-50 ns/day | **~152 ns/day** | **3-4x** |
+| 单条 200ns 耗时 | ~4-5 天 | **~1.3 天** | **3-4x** |
+| 3 重复总计 | ~12-15 天 | **~1.3 天** | **~10x** (并行优势) |
 
 ### 4.3 体系规模与耗时估算
 

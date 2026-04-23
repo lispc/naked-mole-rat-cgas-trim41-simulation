@@ -7,7 +7,9 @@
 ---
 
 
-## 十三、软件版本记录（更新）
+## 软件版本记录
+
+### macOS / Apple M3 Pro (原始环境)
 
 | 软件 | 版本 | 来源 | 用途 |
 |------|------|------|------|
@@ -25,8 +27,27 @@
 | FFTW | 3.3.11 | Homebrew | SDOCK2.0 (未使用) |
 | GCC/Clang | Apple clang 21.0.0 | Xcode | 编译 |
 
+### Linux / 4× RTX 3090 (迁移后环境，2026-04-23)
+
+| 软件 | 版本 | 来源 | 用途 | 备注 |
+|------|------|------|------|------|
+| Python | 3.11.15 | conda-forge (cgas-md) | MD 模拟 | 迁移后统一用 3.11 |
+| OpenMM | 8.5.1 | conda-forge (CUDA build) | MD 模拟 | CUDA 12.x |
+| AmberTools | 24.8 | conda-forge | 体系构建 | tleap, cpptraj |
+| MDAnalysis | 2.10.0 | conda-forge | 轨迹分析 | |
+| MDTraj | 1.11.1 | conda-forge | 轨迹分析 | |
+| Biopython | 1.87 | conda-forge | 结构处理 | |
+| NumPy | 2.4.3 | conda-forge | 数值计算 | |
+| SciPy | 1.17.1 | conda-forge | 科学计算 | |
+| Matplotlib | 3.10.8 | conda-forge | 绘图 | |
+| Seaborn | 0.13.2 | conda-forge | 绘图 | |
+| Pandas | 2.3.3 | conda-forge | 数据处理 | |
+| OpenMMTools | 0.26.0 | conda-forge | 测试体系 | verify_openmm.py 依赖 |
+| CUDA Driver | 580.95.05 | NVIDIA | GPU 驱动 | |
+| CUDA Runtime | 12.9 | conda-forge | CUDA 库 | |
+
 ---
 
 *文档创建：2026-04-22*
-*最后更新：2026-04-23*
+*最后更新：2026-04-23（添加 Linux/RTX 3090 环境）*
 *维护者：Kimi Code CLI*
