@@ -24,6 +24,19 @@ structures/af3_raw/*/*.cif
 structures/af3_raw/*/*.json
 structures/af3_raw/*/msas/
 structures/af3_raw/*/templates/
+structures/af3_raw/*/*.zip
+structures/af3_raw/*/*.a3m
+
+# AF3 subdir docking intermediates
+structures/af3_raw/*/swarm_*/
+structures/af3_raw/*/init/
+structures/af3_raw/*/*.info
+structures/af3_raw/*/*.npy
+structures/af3_raw/*/*.list
+structures/af3_raw/*/*.dat
+structures/af3_raw/*/setup.json
+structures/af3_raw/*/restraints.list
+structures/af3_raw/*/lightdock_*.pdb
 
 # Docking intermediate files (large, can be regenerated)
 structures/docking/lightdock/*/swarm_*/

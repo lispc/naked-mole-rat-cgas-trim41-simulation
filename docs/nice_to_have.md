@@ -10,8 +10,8 @@
 
 | Item | 优先级 | 估计工作量 | 论文价值 |
 |------|--------|-----------|---------|
-| [1. Hsap 4mut 结构获取](#1-hsap-4mut-结构获取) | P1 | 2-3 天 | 直接对照实验（WT vs 突变） |
-| [2. Hgal_4mut_rev 结构验证](#2-hgal_4mut_rev-结构验证) | P2 | 1-2 天 | 反向验证突变效应可逆 |
+| [1. Hsap 4mut 结构获取](#1-hsap-4mut-结构获取) | ✅ 已完成 | 2-3 天 | 直接对照实验（WT vs 突变） |
+| [2. Hgal_4mut_rev 结构验证](#2-hgal_4mut_rev-结构验证) | ✅ 已完成 | 1-2 天 | 反向验证突变效应可逆 |
 | [3. 全长蛋白 MD](#3-全长蛋白-md) | P3 | 1 周 | 验证结构域截断未引入偏差 |
 | [4. 更多 MD 重复](#4-更多-md-重复) | P2 | 线性 | 提高统计显著性 |
 | [5. 不同力场/水模型验证](#5-不同力场水模型验证) | P3 | 1 周 | 方法学稳健性 |
@@ -20,99 +20,37 @@
 
 ---
 
-## 1. Hsap 4mut 结构获取
+## 1. Hsap 4mut 结构获取 — ✅ 已完成
 
-### 现状
-- AF3 Job 2 实际提交的是 Hsap_WT 序列（序列 bug）
-- 因此目前没有 Hsap_cGAS_4mut 的预测结构
-- LightDock 对 Hsap_WT 的对接结果：0/25 成功（几何约束，28.6Å 间距）
+### 结果
+AF3 单体预测已完成（`structures/af3_raw/Hsap_cGAS_4mut/`）。
 
-### 为什么重要
-- **最直接的突变效应验证**：将 Hsap_WT 突变为 4mut 后，如果 495/498 位置的 loop 发生构象变化，可能改变空间几何
-- 如果 Hsap_4mut 也形成紧凑补丁 → 支持"突变驱动几何改变"的假说
-- 如果 Hsap_4mut 仍保持分散 → 说明还有其他因素
+**关键发现**：
+- Hsap_4mut 活性残基最大间距：**28.63Å**（vs Hsap_WT 28.60Å，Δ=+0.03Å）
+- LightDock 对接：**0/25 有效 poses**
+- **结论**：4 个突变**无法**改变人类 cGAS 的分散几何
 
-### 方法
+详见：`docs/af3_mutation_analysis.md`
 
-#### 方案 A：PyMOL in-silico 突变（最快，已具备条件）
-
-```bash
-conda activate py311
-pymol
-
-# PyMOL 命令
-load structures/af3_raw/job2_Hsap_4mut/cgas_fixed.pdb  # 实际这是 WT
-# 或使用 domain truncation:
-load structures/af3_raw/job2_Hsap_4mut/cgas_CT_200-554.pdb
-
-# 4 个突变
-wizard mutagenesis
-# C463S, K479E, L495Y, K498T
-# 选择最优 rotamer（避免 clash）
-# save as hsap_4mut_model.pdb
-```
-
-**局限性**：
-- PyMOL 的 rotamer 选择基于统计库，不能预测 loop 重排
-- 突变后区域（特别是 495/498 附近）可能发生显著构象变化
-- 适合作为 MD 起始点（MD 会自然弛豫），但不适合作为"最终结构"
-
-**适用场景**：快速获得起始结构用于 MD
-
-#### 方案 B：AF3 重新提交（最可靠，需等待）
-
-需要重新提交 2 个 job：
-- Hsap_cGAS_4mut + TRIM41_WT
-- Hgal_cGAS_4mut_rev + TRIM41_WT
-
-**序列确认**：
-```
-> Hsap_cGAS_4mut
-[完整序列，确认包含 C463S, K479E, L495Y, K498T]
-
-> Hgal_cGAS_4mut_rev
-[完整序列，确认包含 S463C, E511K, Y527L, T530K]
-```
-
-**时间成本**：
-- AF3 Server 排队：未知（通常 1-3 天）
-- 加上结果处理：+0.5 天
-
-**适用场景**：如果 reviewer 要求更严格的结构基础
-
-#### 方案 C：ColabFold/AlphaFold2 本地（备选）
-
-如果 AF3 Server 排队太长，可考虑 ColabFold（免费 GPU）：
-- https://colab.research.google.com/github/sokrypton/ColabFold/blob/main/AlphaFold2.ipynb
-- 支持 multimer，但精度略低于 AF3
-- 适合快速验证
-
-### 当前决策
-**暂缓**。Hgal WT（即实际上的"突变体"）已经提供了充分的结构证据：
-1. 18.4Å 紧凑补丁与 28.6Å 分散位点的对比
-2. Docking 成功 vs 失败的几何解释
-3. MD 轨迹将展示动态行为
-
-如果后续 reviewer 要求对照实验，再执行方案 A 或 B。
+### 对假说的影响
+❌ "突变驱动几何改变"假说**不成立**。空间几何由 backbone 折叠决定，4 个点突变不足以改变整体结构。
 
 ---
 
-## 2. Hgal_4mut_rev 结构验证
+## 2. Hgal_4mut_rev 结构验证 — ✅ 已完成
 
-### 现状
-- AF3 Job 4 也提交了 WT 序列（同 Job 2 的 bug）
-- 没有真正的 Hgal_cGAS_WT + 反向突变结构
+### 结果
+AF3 单体预测已完成（`structures/af3_raw/Hgal_cGAS_4mut_rev/`）。
 
-### 为什么重要
-- **反向验证**：将裸鼹鼠突变回人类序列，观察空间几何是否恢复
-- 如果反向突变后恢复分散 → 强支持突变是充分必要条件
-- 如果反向突变后仍保持紧凑 → 提示其他物种特异性因素
+**关键发现**：
+- Hgal_rev 活性残基最大间距：**18.22Å**（vs Hgal_WT 18.43Å，Δ=-0.21Å）
+- LightDock 对接：**7/25 有效 poses**
+- **结论**：4 个反向突变**无法**改变裸鼹鼠 cGAS 的紧凑几何
 
-### 方法
-同 Hsap 4mut（PyMOL 或 AF3 重新提交）
+详见：`docs/af3_mutation_analysis.md`
 
-### 当前决策
-**暂缓**。与 Hsap 4mut 类似，属于增强论证而非必需。
+### 对假说的影响
+❌ "突变是充分必要条件"**不成立**。紧凑几何是物种特异性整体结构的固有特征，不是 4 个突变的结果。
 
 ---
 
