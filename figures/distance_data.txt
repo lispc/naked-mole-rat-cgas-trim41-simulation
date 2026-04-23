@@ -1,0 +1,19 @@
+# Active residue CA-CA distances
+
+Hgal (H. glaber cGAS CTD):
+  C463-K511: 18.43
+  C463-L527: 11.32
+  C463-K530: 13.69
+  K511-L527: 11.35
+  K511-K530: 11.22
+  L527-K530: 9.90
+  max: 18.43
+
+Hsap (H. sapiens cGAS CTD):
+  S463-E479: 21.07
+  S463-Y495: 28.63
+  S463-T498: 27.24
+  E479-Y495: 11.39
+  E479-T498: 11.28
+  Y495-T498: 9.69
+  max: 28.63

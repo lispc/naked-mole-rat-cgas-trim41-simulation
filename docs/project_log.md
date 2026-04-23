@@ -63,25 +63,26 @@
 1. **环境搭建**：`cgas-md` conda env (Python 3.13) + `py311` conda env (LightDock)
 2. **AF3 结构预测**：4 个 job 全部完成（ipTM 均 <0.25，单体可接受）
 3. **域截断**：cGAS CTD (200-554) + TRIM41 SPRY (413-630)，4 个 job 全部处理
-4. **蛋白-蛋白对接**：LightDock 结构域对接完成
-   - **Hgal**：20/20 poses 成功，最佳 pose 已保存
-   - **Hsap**：空间几何限制，495/498 无法与 463/479 同时接触
-5. **核心发现**：裸鼹鼠 4 个突变将活性位点从分散的 ~28Å 聚集成紧凑的 ~18Å 补丁
+4. **蛋白-蛋白对接**：LightDock 结构域对接全部完成
+   - **Hgal**：20/20 poses 成功，最佳 pose 已保存 (`best_pose.pdb`)
+   - **Hsap (无约束)**：0/25 成功，495/498 始终在界面外
+   - **Hsap (restraints, 50sw/200step)**：0/25 成功，物理上不可能
+5. **核心发现**：裸鼹鼠 4 个突变将活性位点从分散的 ~28.6Å 聚集成紧凑的 ~18.4Å 补丁
+6. **发表级图表**：PyMOL + matplotlib 生成 4 张图，2400×1800 dpi=300
 
 ### ⏳ 运行中
 
-- **Hsap 增强对接**：50 swarms × 200 steps + 活性残基约束
+无
 
-### 📋 待办
+### 📋 待办（按优先级）
 
-- [ ] Hsap 增强对接结果分析
-- [ ] MD 体系构建（Hgal best_pose → Amber tleap → OpenMM）
-- [ ] 全长对接（可选）
-- [ ] in-silico 突变（WT 结构 → 突变体）
+- [ ] **MD 体系构建**（Hgal best_pose → Amber tleap → OpenMM）← **当前最高优先级**
 - [ ] 生产 MD 模拟（200ns × 3 重复）
+- [ ] Hsap 4mut 结构获取（AF3 重新提交 或 PyMOL in-silico 突变）
 - [ ] MM-GBSA 结合能计算
 - [ ] Rosetta 突变扫描
-- [ ] 论文图表和 Methods
+- [ ] 论文 Methods 撰写
+- [ ] 全长对接（可选，评估是否需要）
 
 ---
 
@@ -102,11 +103,21 @@ structures/af3_raw/
 structures/docking/lightdock/
   Hgal_domain/best_pose.pdb     # ← MD 起始结构
   Hsap_domain/
-  Hsap_restrained/              # 运行中
+  Hsap_restrained/
+
+figures/                          # 发表级图表
+  hgal_active_residues.png
+  hsap_active_residues.png
+  comparison_overlay.png
+  distance_comparison.png
+  distance_data.txt
 
 scripts/
   process_af3_results.py
   analyze_lightdock.py
+  calc_residue_distances.py       # PDB 精确距离计算
+  quick_analyze_top_poses.py      # LightDock top poses 分析
+  visualize_active_residues.pml   # PyMOL 自动化作图
   build_system.py, run_md.py, analyze_trajectory.py, run_mmpbsa.py
 
 docs/
@@ -132,10 +143,14 @@ docs/
             LightDock 安装（py311 env），Hsap/Hgal 结构域对接
             核心发现：空间几何差异（18Å vs 28Å）
 2026-04-23  Hsap 增强对接启动（restraints, 50sw/200step）
+            Hsap 增强对接完成（0/25 失败，确认几何约束）
+            精确距离测量（PDB CA-CA: 18.43Å vs 28.63Å）
+            PyMOL + matplotlib 图表生成（4 张发表级图）
+            README.md + 文档全面更新
 ```
 
 ---
 
 *文档创建：2026-04-22*
-*最后更新：2026-04-23*
+*最后更新：2026-04-23 ( docking 阶段完成，进入 MD 准备 )*
 *维护者：Kimi Code CLI*
