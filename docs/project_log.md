@@ -277,9 +277,53 @@ tail -f data/md_runs/Hgal_domain/monitor.log  # 查看自动监控
 
 ---
 
-## 8. Rosetta Docking 验证 (2026-04-23)
+---
 
-### 8.1 安装
+## 八、AF3 突变序列验证 — 重大发现（2026-04-23）
+
+### 8.1 背景
+此前发现 Hsap cGAS 活性残基分散（28.6Å），Hgal cGAS 紧凑（18.4Å）。假设这是 4 个氨基酸突变驱动的。
+
+### 8.2 验证方法
+重新向 AF3 提交正确突变序列单体：
+- Hsap_cGAS_4mut（C463S, K479E, L495Y, K498T）
+- Hgal_cGAS_4mut_rev（S463C, E511K, Y527L, T530K）
+
+### 8.3 结果
+
+| 结构 | 最大间距 | Δ vs WT | Docking | 结论 |
+|------|---------|---------|---------|------|
+| Hsap_WT | 28.60Å | — | 0/25 ❌ | 分散几何 |
+| Hsap_4mut | 28.63Å | +0.03Å | 0/25 ❌ | **突变无法改变几何** |
+| Hgal_WT | 18.43Å | — | 20/20 ✅ | 紧凑几何 |
+| Hgal_rev | 18.22Å | -0.21Å | 7/25 ✅ | **反向突变无法改变几何** |
+
+### 8.4 核心推论
+
+❌ **"4 个突变驱动几何改变"假说不成立。**
+
+- 几何差异是**物种特异性整体 backbone 折叠**的产物（Hsap vs Hgal RMSD ~21Å）
+- 4 个点突变对几何影响极小（<0.3Å）
+- 需要重新审视论文机制论述
+
+### 8.5 对项目的影响
+
+✅ **仍然有效**：
+- Hgal 紧凑几何是真实的 → MD 数据有效
+- Docking 成功/失败验证 → 几何论证成立
+- TRIM41 可同时接触 Hgal 全部 4 个位点 → 功能解释仍成立
+
+❌ **需要修正**：
+- 论文 Discussion：从"突变聚集位点"改为"物种特异性结构差异"
+- 不再声称"4 个突变是充分条件"
+
+详见：`docs/af3_mutation_analysis.md`
+
+---
+
+## 九、Rosetta Docking 验证 (2026-04-23)
+
+### 9.1 安装
 
 Rosetta 2026.15 通过 Conda 安装在独立环境 `rosetta`（Python 3.12），避免与运行中的 MD 环境冲突。
 
@@ -287,7 +331,7 @@ Rosetta 2026.15 通过 Conda 安装在独立环境 `rosetta`（Python 3.12），
 conda create -n rosetta -c https://conda.rosettacommons.org -c conda-forge python=3.12 rosetta
 ```
 
-### 8.2 运行 Global Docking
+### 9.2 运行 Global Docking
 
 输入：`Hgal_domain_processed.pdb` (573 aa, chain A=TRIM41, chain B=cGAS)
 
@@ -296,7 +340,7 @@ docking_protocol -s input.pdb -docking:partners A_B -nstruct 10 \
   -out:file:scorefile global.sc -ignore_unrecognized_res
 ```
 
-### 8.3 结果
+### 9.3 结果
 
 | 指标 | 数值 |
 |------|------|
@@ -308,7 +352,7 @@ docking_protocol -s input.pdb -docking:partners A_B -nstruct 10 \
 
 **结论**：Rosetta global docking 最佳结果与 LightDock `best_pose` 的 CA-RMSD 仅 **2.1 Å**，两种方法预测的结合模式高度一致。
 
-### 8.4 Human WT Docking
+### 9.4 Human WT Docking
 
 使用 AF3 预测结构（`structures/af3_raw/job1_Hsap_WT/`）进行 Rosetta global docking：
 
@@ -337,7 +381,7 @@ docking_protocol -s hsap_input.pdb -docking:partners A_B -nstruct 10 \
 - Human WT 的 Fnat 更高（0.89 vs 0.39），界面更刚性、定义更清晰
 - 这与 Chen et al. 2025 的发现一致：突变改变的是**特异性**而非原始亲和力
 
-### 8.5 Relax 局部优化
+### 9.5 Relax 局部优化
 
 对 Hgal LightDock pose 进行侧链优化：
 
@@ -354,7 +398,7 @@ relax -s input.pdb -nstruct 3 \
   - 能量改善: **-6.12 REU**
 - 说明：RMSD 偏大（2.1–2.4 Å），约束对 573 aa 系统可能不够强；如需严格局部优化，建议使用更强约束或界面限制最小化
 
-### 8.6 文件位置
+### 9.6 文件位置
 
 - 报告：`docs/rosetta_docking_report.md`
 - Hgal 结果：`structures/docking/rosetta/output_global/`
@@ -365,5 +409,5 @@ relax -s input.pdb -nstruct 3 \
 
 ---
 
-*最后更新：2026-04-23 ( 3× RTX 3090 MD 运行中 + Rosetta docking Hgal/Human 完成 + Relax 运行中 )*
+*最后更新：2026-04-23 ( AF3 突变验证完成 + Rosetta docking Hgal/Human 完成 + Relax 运行中 + 3× RTX 3090 MD 运行中 )*
 *维护者：Kimi Code CLI*

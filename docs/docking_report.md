@@ -308,9 +308,41 @@ lightdock3.py setup.json 200 -c 1 -s fastdfire
 
 **关键结论（可直接写进论文）**：
 
-> 裸鼹鼠的 4 个突变不是改变了 TRIM41 的结合亲和力，而是将分散的泛素化位点（~28.6Å）聚集成一个紧凑的补丁（~18.4Å）。这个几何改变使 TRIM41 能够同时接触全部 4 个位点，优化了 E2-Ub 的传递效率。人源 cGAS 中，495/498 与 463/479 相距太远（28.6Å），TRIM41 无法同时覆盖，导致泛素化效率受限。
+> 裸鼹鼠 cGAS 的 4 个活性残基在空间上形成紧凑的单一界面补丁（~18.4Å），而人类 cGAS 的对应位点呈分散分布（~28.6Å）。LightDock 蛋白对接证实，紧凑几何使 TRIM41 能够同时接触全部 4 个位点，优化了 E2-Ub 的传递效率。人源 cGAS 中，495/498 与 463/479 相距太远（28.6Å），TRIM41 无法同时覆盖，导致泛素化效率受限。
 >
 > **这是“结合几何”而非“结合亲和力”驱动的功能差异。**
+
+---
+
+### 10.3.4 AF3 突变序列验证 — 重大发现（2026-04-23）
+
+为验证"突变驱动几何改变"假说，我们重新向 AF3 提交了正确的突变序列单体：
+- **Hsap_cGAS_4mut**：人类 cGAS + C463S, K479E, L495Y, K498T
+- **Hgal_cGAS_4mut_rev**：裸鼹鼠 cGAS + S463C, E511K, Y527L, T530K（反向突变）
+
+**结果**：
+
+| 结构 | 最大 CA-CA 间距 | 与 WT 对比 | Docking (top 25) |
+|------|---------------|-----------|-----------------|
+| Hsap_WT | 28.60Å | — | 0/25 ❌ |
+| **Hsap_4mut** | **28.63Å** | **Δ = +0.03Å** | **0/25 ❌** |
+| Hgal_WT | 18.43Å | — | 20/20 ✅ |
+| **Hgal_rev** | **18.22Å** | **Δ = -0.21Å** | **7/25 ✅** |
+
+**核心推论**：
+
+❌ **"4 个突变驱动几何改变"假说不成立。**
+
+- 4 个点突变对活性残基的空间几何影响极小（<0.3Å）
+- 几何差异是**物种特异性整体 backbone 折叠**的产物（Hsap vs Hgal RMSD ~21Å）
+- 4 个突变位点恰好位于这些不同区域，但突变本身不是驱动力
+
+**对论文的影响**：
+- ✅ 紧凑 vs 分散的几何差异仍然成立
+- ✅ Docking 成功/失败的验证仍然成立
+- ❌ 需要修正机制论述：从"突变聚集位点"改为"物种特异性结构差异导致几何不同"
+
+详见：`docs/af3_mutation_analysis.md`
 
 ---
 
@@ -323,6 +355,8 @@ lightdock3.py setup.json 200 -c 1 -s fastdfire
 | 3 | LightDock Hsap (20sw/100step) | 2026-04-23 | ❌ 0/25 成功 | 空间几何限制（28Å），不是算法问题 |
 | 4 | LightDock Hsap (50sw/200step + restraints) | 2026-04-23 | ❌ 0/25 成功 | **即使 restraints 也无法克服物理几何约束** — 495/498 与 463/479 相距 28.6Å，任何 docking 算法都无法同时覆盖 |
 | 5 | LightDock Hgal (20sw/100step) | 2026-04-23 | ✅ 20/20 成功 | 紧凑补丁（18.4Å）使 docking 天然可行 |
+| 6 | AF3 Hsap_4mut 单体 + Docking | 2026-04-23 | ❌ 0/25 成功 | 4 个突变**无法**改变分散几何（28.63Å） |
+| 7 | AF3 Hgal_rev 单体 + Docking | 2026-04-23 | ✅ 7/25 成功 | 4 个反向突变**无法**改变紧凑几何（18.22Å） |
 
 **关键教训**：
 - 当活性残基最大间距 > TRIM41 结合面直径时，restraints 也无效
@@ -380,6 +414,23 @@ tools/SDOCK2.0/                  # GitHub: victorPKU/SDOCK2.0
     1AY7/, 2REX/
 ```
 
+#### AF3 突变序列验证结果
+```
+structures/af3_raw/
+  Hsap_cGAS_4mut/                  # 新：正确突变序列
+    fold_human_cgas_mut_model_0.cif
+    model_0.pdb
+    cgas_CT_200-554.pdb
+    cgas_fixed.pdb
+    lightdock_*/                   # docking 结果
+  Hgal_cGAS_4mut_rev/              # 新：正确反向突变序列
+    fold_rat_cgas_mut_rev_model_0.cif
+    model_0.pdb
+    cgas_CT_200-554.pdb
+    cgas_fixed.pdb
+    lightdock_*/                   # docking 结果
+```
+
 #### LightDock 结果
 ```
 structures/docking/lightdock/
@@ -402,7 +453,7 @@ structures/docking/lightdock/
     top_1.pdb 到 top_20.pdb
     best_pose.pdb                # 复制自 top_1.pdb
 
-  Hsap_restrained/               # 运行中
+  Hsap_restrained/               # 已完成
     setup.json
     restraints.list              # L A.CYS.463, L A.LYS.479, L A.LEU.495, L A.LYS.498
     swarm_0/ 到 swarm_49/        # 50 swarms
