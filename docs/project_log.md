@@ -277,5 +277,93 @@ tail -f data/md_runs/Hgal_domain/monitor.log  # 查看自动监控
 
 ---
 
-*最后更新：2026-04-23 ( 3× RTX 3090 并行生产 MD 运行中，~152 ns/day )*
+## 8. Rosetta Docking 验证 (2026-04-23)
+
+### 8.1 安装
+
+Rosetta 2026.15 通过 Conda 安装在独立环境 `rosetta`（Python 3.12），避免与运行中的 MD 环境冲突。
+
+```bash
+conda create -n rosetta -c https://conda.rosettacommons.org -c conda-forge python=3.12 rosetta
+```
+
+### 8.2 运行 Global Docking
+
+输入：`Hgal_domain_processed.pdb` (573 aa, chain A=TRIM41, chain B=cGAS)
+
+```bash
+docking_protocol -s input.pdb -docking:partners A_B -nstruct 10 \
+  -out:file:scorefile global.sc -ignore_unrecognized_res
+```
+
+### 8.3 结果
+
+| 指标 | 数值 |
+|------|------|
+| 最佳 decoy | input_0003 |
+| 界面能量 (I_sc) | **-23.02 REU** |
+| CA RMSD vs LightDock | **2.098 Å** |
+| 界面 RMSD | 2.834 Å |
+| 链间接触 (<5Å) | 1,298 |
+
+**结论**：Rosetta global docking 最佳结果与 LightDock `best_pose` 的 CA-RMSD 仅 **2.1 Å**，两种方法预测的结合模式高度一致。
+
+### 8.4 Human WT Docking
+
+使用 AF3 预测结构（`structures/af3_raw/job1_Hsap_WT/`）进行 Rosetta global docking：
+
+```bash
+# 合并受体和配体
+python scripts/prepare_rosetta_input.py \
+  --receptor structures/af3_raw/job1_Hsap_WT/trim41_SPRY_413-630.pdb \
+  --ligand structures/af3_raw/job1_Hsap_WT/cgas_CT_200-554.pdb \
+  --output structures/docking/rosetta/hsap_input.pdb
+
+# 运行 docking
+docking_protocol -s hsap_input.pdb -docking:partners A_B -nstruct 10 \
+  -out:file:scorefile hsap_global.sc -ignore_unrecognized_res
+```
+
+| 指标 | Human WT | Hgal |
+|------|----------|------|
+| 最佳 I_sc | **-22.15 REU** | **-23.02 REU** |
+| 最佳 RMSD vs 输入 | **2.12 Å** | **2.10 Å** |
+| 平均 I_sc | -18.34 | -12.76 |
+| Fnat (最佳) | **0.893** | 0.385 |
+| CAPRI rank | **3 (高质量)** | 1 (中等) |
+
+**关键发现**：
+- 两种体系的界面能量几乎相同（-22 vs -23 REU），说明 4 个 Hgal 突变在 Rosetta 能量函数中没有显著改变结合亲和力
+- Human WT 的 Fnat 更高（0.89 vs 0.39），界面更刚性、定义更清晰
+- 这与 Chen et al. 2025 的发现一致：突变改变的是**特异性**而非原始亲和力
+
+### 8.5 Relax 局部优化
+
+对 Hgal LightDock pose 进行侧链优化：
+
+```bash
+relax -s input.pdb -nstruct 3 \
+  -relax:constrain_relax_to_start_coords \
+  -relax:default_repeats 1
+```
+
+- 状态：2/3 decoys 完成（第 3 个因超时而终止）
+- 结果：
+  - Decoy 1: total_score = -1635.13, CA-RMSD = 2.09 Å
+  - Decoy 2: total_score = -1641.25, CA-RMSD = 2.43 Å
+  - 能量改善: **-6.12 REU**
+- 说明：RMSD 偏大（2.1–2.4 Å），约束对 573 aa 系统可能不够强；如需严格局部优化，建议使用更强约束或界面限制最小化
+
+### 8.6 文件位置
+
+- 报告：`docs/rosetta_docking_report.md`
+- Hgal 结果：`structures/docking/rosetta/output_global/`
+- Human WT 结果：`structures/docking/rosetta/output_hsap_global/`
+- Relax 结果：`structures/docking/rosetta/output_relax/`
+- 分析脚本：`structures/docking/rosetta/analyze_results.py`, `analyze_hsap.py`
+- 输入准备：`scripts/prepare_rosetta_input.py`
+
+---
+
+*最后更新：2026-04-23 ( 3× RTX 3090 MD 运行中 + Rosetta docking Hgal/Human 完成 + Relax 运行中 )*
 *维护者：Kimi Code CLI*
