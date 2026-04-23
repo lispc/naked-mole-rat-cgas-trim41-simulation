@@ -425,5 +425,38 @@ relax -s input.pdb -nstruct 3 \
 
 ---
 
-*最后更新：2026-04-23 ( AF3 突变验证完成 + Rosetta docking Hgal/Human 完成 + Relax 运行中 + 嵌合体序列已生成 + 3× RTX 3090 MD 运行中 )*
+## 十、嵌合体 AF3 实验 (2026-04-23)
+
+### 10.1 实验设计
+
+4 个嵌合体验证"长 loop 驱动紧凑几何"假说：
+
+| 嵌合体 | 组成 | 目的 |
+|--------|------|------|
+| Chimera1 | Hsap 1-462 + Hgal 463-554 | loop 是否充分 |
+| Chimera2 | Hgal 1-462 + Hsap 463-522 | loop 是否必要 |
+| Chimera3 | Hsap + Hgal loop 462-494 插入 | 最小 loop 是否充分 |
+| Chimera4 | Hgal - loop 462-494 删除 | 反向验证 |
+
+### 10.2 结果
+
+| 嵌合体 | Max Span | Docking (top 25) | 结论 |
+|--------|---------|-----------------|------|
+| Chimera1 | 28.54Å | 0/25 | 局部紧凑但整体分散 |
+| Chimera2 | 28.55Å | 0/25 | Hgal N 端不能拯救 |
+| Chimera3 | 40.02Å | 0/25 | 简单插入不 work |
+| Chimera4 | 24.32Å | 0/25 | 删除 loop 部分恢复 |
+
+### 10.3 关键发现
+
+❌ **"长 loop 单独驱动紧凑几何"假说不成立**
+
+- Chimera1 中 Hgal C 端局部仍紧凑（18.24Å），但整体蛋白形状改变导致补丁不在 TRIM41 结合面上
+- **物种特异性整体折叠决定位点在表面的位置/取向，不仅仅是局部几何间距**
+
+详见：`docs/af3_mutation_analysis.md` 第 7-8 节
+
+---
+
+*最后更新：2026-04-23 ( AF3 突变验证完成 + 嵌合体实验完成 + Rosetta docking Hgal/Human 完成 + Relax 运行中 + 3× RTX 3090 MD 运行中 )*
 *维护者：Kimi Code CLI*

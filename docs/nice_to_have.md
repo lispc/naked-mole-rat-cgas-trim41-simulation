@@ -55,17 +55,19 @@ AF3 单体预测已完成（`structures/af3_raw/Hgal_cGAS_4mut_rev/`）。
 
 ---
 
-## 3. 嵌合体 AF3 预测 — 🔄 进行中
+## 3. 嵌合体 AF3 预测 — ✅ 已完成
 
-### 背景
-序列对齐发现 Hsap 463 的真正同源位点是 Hgal 495（偏移 32 位）。Hgal 的紧凑几何（18Å）来自**额外的 S463 位点**，它通过 32 aa 长 loop 靠近其他 3 个位点。
-
-### 嵌合体设计
+### 结果
 见 `docs/af3_mutation_analysis.md` 第 7 节。
 
-### 状态
-- 序列已生成：`sequences/chimeras.fasta`
-- 待提交 AF3 Server
+**关键发现**：嵌合体实验推翻了简单"loop 假说"。Hgal 的紧凑几何是物种特异性整体折叠的产物，不能通过移植 loop 区域重现。
+
+| 嵌合体 | Max Span | Docking | 结论 |
+|--------|---------|---------|------|
+| Chimera1 (HsapN+HgalC) | 28.54Å | 0/25 | 局部紧凑但整体分散 |
+| Chimera2 (HgalN+HsapC) | 28.55Å | 0/25 | Hgal N 端不能拯救 |
+| Chimera3 (Hsap+loop) | 40.02Å | 0/25 | 简单插入不 work |
+| Chimera4 (Hgal-loop) | 24.32Å | 0/25 | 删除 loop 部分恢复 |
 
 ---
 
