@@ -620,3 +620,261 @@ K48-泛素化水平变化 → P97提取 → 染色质滞留
 
 *最后更新：2026-04-23 ( 引用28分析 + UniProt泛素化位点 + 假说修正 )*
 *维护者：Kimi Code CLI*
+
+
+---
+
+## 13. Hsap 4mut 变构效应分析（2026-04-23）
+
+### 13.1 核心发现：AF3 结构直接证据
+
+比较 Hsap WT vs 4mut 的 AF3 单体结构（cGAS CTD 200-522）：
+
+| 区域 | RMSD | 最大位移 | 科学意义 |
+|------|------|---------|---------|
+| C 端 460-535（含 4mut） | **0.32Å** | 1.93Å | 4mut 位点本身结构几乎不变 |
+| N 端 211-219 | **2.65Å** | **12.14Å** | N 端核心区域大幅重排 |
+| 实际界面区 288-315 | ~1-3Å | 3.44Å (res 301) | 界面微变，足以改变相互作用 |
+
+**关键残基位移**：
+- 212: **12.14Å**（最大）
+- 213: **10.50Å**（Hgal 界面残基）
+- 211, 214, 217, 218: 6-9Å
+
+**科学意义**：
+- 4mut 在 C 端不改变局部结构，但通过**长程变构效应**改变 N 端界面区域
+- 这是**直接的结构证据**，无需任何 TRIM41 结构信息
+- 与论文功能数据（4mut 减少 TRIM41 介导泛素化）完全吻合
+
+### 13.2 变构路径假说
+
+```
+4mut (463S/511E/527Y/530T) in C-terminal loop
+    ↓
+局部结构不变 (RMSD 0.32Å)
+    ↓
+长程变构效应 → N 端 211-219 区域重排 (位移 6-12Å)
+    ↓
+N 端域整体构象变化 → 界面区 288-315 微变 (1-3Å)
+    ↓
+TRIM41 识别效率 ↓ / Lys-414 泛素化效率 ↓
+    ↓
+K48-泛素化水平变化 → P97 提取 → 染色质滞留变化
+```
+
+详见：`docs/interface_analysis_report.md` 第5节
+
+---
+
+## 14. Rosetta 对接验证 N 端界面（2026-04-23）
+
+### 14.1 Hgal Rosetta 对接
+
+- 最佳 pose：input_0003（total_score = -765.332, I_sc = -23.017, Fnat = 0.385）
+- 界面残基：31 个（N 端 19, 中间 12, C 端 0）
+- 4mut 距离：463→27Å, 511→28Å, 527→27Å, 530→36Å
+
+### 14.2 Hsap Rosetta 对接
+
+- 最佳 pose：hsap_input_0006（total_score = -482.764, I_sc = -21.528, Fnat = 0.857）
+- 界面残基：15 个（N 端 12, 中间 3, C 端 0）
+- 4mut 距离：463→26Å, 511→21Å
+
+### 14.3 Hgal vs Hsap 界面比较
+
+| 特征 | Hgal | Hsap |
+|------|------|------|
+| 界面残基数 | 31 | 15 |
+| N 端残基 | 203-249 | 224, 288-298 |
+| 中间残基 | 387, 413-439 | 313-315 |
+| 共同残基 | **仅 224** | **仅 224** |
+| 全局 RMSD | — | **20.96Å** |
+
+**结论**：
+- ✅ 两个物种的界面都在 N 端/中间区域，**都不在 C 端**
+- ⚠️ 但具体残基几乎完全不同（物种特异性界面）
+- ⚠️ Hgal MD 结果**不能直接外推**到 Hsap 4mut 机制
+
+详见：`docs/interface_analysis_report.md` 第6节
+
+---
+
+## 15. 生成文件索引（2026-04-23）
+
+| 文件 | 类型 | 描述 |
+|------|------|------|
+| `docs/interface_analysis_report.md` | 报告 | 完整界面分析报告 |
+| `docs/summary_2026-04-23.md` | 日报 | 今日工作总结 |
+| `figures/hsap_4mut_allostery_clean.png` | 图 | 4mut 变构效应可视化 |
+| `figures/hsap_wt_nterm.png` | 图 | WT N 端结构 |
+| `figures/hsap_4mut_nterm.png` | 图 | 4mut N 端结构 |
+| `scripts/build_hsap_md_system.py` | 脚本 | Hsap MD 系统构建 |
+| `scripts/visualize_4mut_allostery.pml` | 脚本 | PyMOL 4mut 可视化 |
+| `scripts/visualize_4mut_allostery_v2.pml` | 脚本 | PyMOL 4mut 可视化 v2 |
+
+---
+
+## 16. 进行中任务
+
+| 任务 | 状态 | 预计完成 |
+|------|------|---------|
+| Rosetta 安装（本地） | 🟡 下载 27% | 1-2 小时 |
+| Hgal MD (3 rep, 200ns, RTX 3090) | 🟡 运行中 | 2026-04-24 19:00 |
+
+---
+
+## 17. 下一步计划
+
+1. **Hgal MD 结果审查**（明天，RTX 3090）
+2. **Rosetta 对接验证**（安装完成后）
+3. **Rosetta 突变扫描**（4mut → 界面能量影响）
+4. **Hsap MD 决策**：是否构建 Hsap WT/4mut MD 系统
+5. **TRIM41 泛素化位点预测**：Lys-414 是最可能位点
+
+---
+
+---
+
+## 18. 4mut 位点修正（2026-04-23 紧急）
+
+### 18.1 问题发现
+
+通过 `pdftotext main.pdf` 重新提取论文原文 page 2：
+
+> "Introduction of the four amino acid substitutions into **naked mole-rat cGAS (S463D+E511K+Y527L+T530K)** significantly diminished its stimulatory effect on HR repair, whereas the corresponding 4-aa mutations in **human cGAS (D431S+K479E+L495Y+K498T)**"
+
+**发现项目内部 4mut 定义严重错误：**
+
+| 问题 | 错误 | 正确 |
+|------|------|------|
+| Hsap 4mut fasta | C463S, K479E, L495Y, K498T | **D431S**, K479E, L495Y, K498T |
+| Hgal 4mut_rev AF3 | 与 WT 完全相同（未做突变） | **S463D, E511K, Y527L, T530K** |
+
+**位点对应关系：**
+- Hgal 463 = Hsap 431
+- Hgal 511 = Hsap 479
+- Hgal 527 = Hsap 495
+- Hgal 530 = Hsap 498
+
+### 18.2 影响评估
+
+**之前基于错误 4mut 结构的分析全部失效：**
+- ❌ Hsap "4mut" 变构效应验证（现有结构缺少 431→S，多了 463→S）
+- ❌ 4mut 到界面距离计算（基于错误的 463/511/527/530）
+
+**仍然有效的结论：**
+- ✅ 界面在 N 端/中间区域（不受 4mut 位点影响）
+- ✅ Hgal vs Hsap 结构差异（20Å RMSD）
+- ✅ 论文从未声称 4mut 在物理界面上
+
+### 18.3 修正文件
+
+| 文件 | 说明 |
+|------|------|
+| `sequences/Hsap_cGAS_4mut_corrected.fasta` | D431S, K479E, L495Y, K498T (522 aa) |
+| `sequences/Hgal_cGAS_4mut_rev_corrected.fasta` | S463D, E511K, Y527L, T530K (554 aa) |
+| `docs/4mut_correction_log.md` | 完整修正记录 |
+
+### 18.4 下一步
+
+1. [ ] 重新提交 AF3 单体预测（Hsap 4mut corrected + Hgal 4mut_rev corrected）
+2. [ ] 基于新结构重新评估变构效应
+3. [ ] 更新所有文档中的 4mut 位点引用
+
+---
+
+*最后更新：2026-04-23 ( 4mut 位点紧急修正 + 论文原文确认 )*
+*维护者：Kimi Code CLI*
+
+---
+
+## 19. Rosetta 安装与突变扫描（2026-04-24）
+
+### 19.1 Rosetta 安装成功
+
+- **包**: PyRosetta 2025.06+release (conda, osx-arm64)
+- **方法**: `curl -C -` 断点续传下载 1.46 GB tarball → 本地 `conda install`
+- **环境**: `rosetta` (Python 3.12)
+- **状态**: ✅ 已验证 (`import pyrosetta; pyrosetta.init()`)
+
+### 19.2 Rosetta 突变扫描（Pack+Min）
+
+**方法**: 在 WT 对接复合物上 in-silico 突变 → PackRotamersMover → MinMover
+
+| 体系 | WT I_sc | 4mut I_sc | ΔΔG (I_sc) | ΔΔG (E_B) |
+|------|---------|-----------|------------|-----------|
+| Hgal → 4mut_rev | +1180.3 | +1180.3 | **0.000** | +235.2 |
+| Hsap → 4mut | +139.8 | +139.8 | **0.000** | −12.8 |
+
+**结论**: I_sc 完全不变 → 4mut 不直接接触 TRIM41 界面（支持变构机制）
+
+### 19.3 Rosetta 突变扫描（FastRelax）
+
+**方法**: 同上，但用 FastRelax（允许 backbone 放松）替代 Pack+Min
+
+| 体系 | WT I_sc | 4mut I_sc | ΔΔG (I_sc) | ΔΔG (E_B) |
+|------|---------|-----------|------------|-----------|
+| Hgal → 4mut_rev | **−24.9** | **−25.0** | **−0.07** | −9.1 |
+| Hsap → 4mut | **−29.9** | **−27.2** | **+2.76** | +9.5 |
+
+**关键发现**:
+- FastRelax 消除 steric clash，I_sc 从正值变为负值（真实界面能量）
+- **Hsap 4mut 轻微去稳定化界面** (+2.76 REU) → 与功能实验一致
+- Hgal 4mut_rev 界面几乎不变 (−0.07 REU)
+- 两个方向变化不对称，支持构象选择机制
+
+### 19.4 Rosetta 对接验证（4mut 结构）
+
+**输入**: 4mut cGAS CTD（对齐到 WT 坐标系）+ TRIM41 SPRY
+**方法**: PyRosetta DockingProtocol, 10 decoy/体系
+
+| 体系 | Best Score | 4mut→界面距离 |
+|------|-----------|--------------|
+| Hgal 4mut_rev | −766.6 | 42–59 Å |
+| Hsap 4mut | −657.1 | 30–61 Å |
+
+**结论**: 即使使用 4mut 结构重新对接，TRIM41 仍结合在 cGAS N 端/中段，4mut 位点距离界面 30–60Å。
+
+### 19.5 验证方案文档
+
+编写 `docs/proposed_validation_experiments.md`，列出 10 个计算实验方案，按 P0/P1/P2 优先级排序：
+
+| 优先级 | 实验 | 所需资源 |
+|-------|------|---------|
+| P0 | DCCM, PCA, RMSF, 氢键追踪 | Hgal MD 轨迹 |
+| P1 | FastRelax（已完成）, 接触图, MM-GBSA | M3 Pro |
+| P2 | Hsap MD, AlloSigMA | RTX 3090 / 额外包 |
+
+### 19.6 文件清单
+
+| 文件 | 说明 |
+|------|------|
+| `scripts/rosetta_mutational_scan.py` | Pack+Min 突变扫描 |
+| `scripts/rosetta_fastrelax_mutscan.py` | FastRelax 突变扫描 |
+| `scripts/rosetta_dock_4mut.py` | 4mut 对接 |
+| `scripts/prepare_4mut_docking_input.py` | 4mut 对接输入准备 |
+| `scripts/download_pyrosetta.sh` | 断点续传下载脚本 |
+| `docs/rosetta_mutational_scan_report.md` | 突变扫描报告 |
+| `docs/rosetta_docking_4mut_report.md` | 对接验证报告 |
+| `docs/proposed_validation_experiments.md` | 验证方案 |
+| `structures/docking/rosetta/*_relaxed.pdb` | FastRelax 输出（4 个） |
+
+---
+
+## 20. 进行中任务
+
+| 任务 | 状态 | 预计完成 |
+|------|------|---------|
+| Hgal MD (3 rep, 200ns, RTX 3090) | 🟡 运行中 | 2026-04-24 19:00 |
+
+## 21. 下一步计划
+
+1. **Hgal MD 结果审查**（明天，RTX 3090）→ DCCM + PCA + 氢键追踪
+2. **Hsap MD 构建**（RTX 3090 空闲后）
+3. **接触图差异分析**（M3 Pro，现有 AF3 结构）
+4. **MM-GBSA**（M3 Pro）
+
+---
+
+*最后更新：2026-04-24 (Rosetta 安装 + FastRelax 突变扫描 + 4mut 对接验证)*
+*维护者：Kimi Code CLI*
