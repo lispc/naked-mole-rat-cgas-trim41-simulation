@@ -867,14 +867,144 @@ K48-泛素化水平变化 → P97 提取 → 染色质滞留变化
 |------|------|---------|
 | Hgal MD (3 rep, 200ns, RTX 3090) | 🟡 运行中 | 2026-04-24 19:00 |
 
-## 21. 下一步计划
+## 21. Hsap MD 体系构建（2026-04-24）
 
-1. **Hgal MD 结果审查**（明天，RTX 3090）→ DCCM + PCA + 氢键追踪
-2. **Hsap MD 构建**（RTX 3090 空闲后）
-3. **接触图差异分析**（M3 Pro，现有 AF3 结构）
-4. **MM-GBSA**（M3 Pro）
+### 21.1 决策
+
+- **问题 1**: 做 Hsap MD → ✅ 确认
+- **问题 2**: 起始结构用 Rosetta docking pose → ✅ 选项 A
+- **问题 3**: 是否延长 Hgal MD → 等 200ns 跑完再讨论
+
+### 21.2 Hsap WT 体系
+
+| 参数 | 值 |
+|------|-----|
+| 起始结构 | Rosetta docking `hsap_input_0006` (I_sc = -21.53) |
+| cGAS | Hsap WT CTD (200-522, 323 residues) |
+| TRIM41 | SPRY (413-630, 218 residues) |
+| 总残基 | 541 |
+| 力场 | ff19SB + OPC |
+| 溶剂化 | solvateBox 12Å |
+| 离子 | 21 Cl⁻ (neutralize) |
+| 初始能量 | -2,795,137 kJ/mol |
+| EM 后能量 | -3,459,393 kJ/mol |
+| 文件 | `data/md_runs/Hsap_WT/Hsap_WT.{prmtop,rst7,minimized.pdb}` |
+
+### 21.3 Hsap 4mut 体系
+
+| 参数 | 值 |
+|------|-----|
+| 起始结构 | WT pose + in-silico 突变 (PDBFixer 重建侧链) |
+| 突变 | D431S, K479E, L495Y, K498T |
+| cGAS | Hsap 4mut CTD (200-522, 323 residues) |
+| TRIM41 | SPRY (413-630, 218 residues) |
+| 初始能量 | -2,800,892 kJ/mol |
+| EM 后能量 | -3,464,575 kJ/mol |
+| 文件 | `data/md_runs/Hsap_4mut/Hsap_4mut.{prmtop,rst7,minimized.pdb}` |
+
+**注意**: 4mut 结构通过 Bio.PDB 修改 resname + 删除侧链 + PDBFixer 重建生成。Backbone 完全保留 WT 坐标（AF3 单体比较显示 4mut backbone RMSD 仅 0.32Å）。
+
+### 21.4 运行命令（待 Hgal 完成后执行）
+
+```bash
+conda activate cgas-md
+
+# Hsap WT (GPU 0)
+CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
+  --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
+  --pdb data/md_runs/Hsap_WT/Hsap_WT_minimized.pdb \
+  --name Hsap_WT_rep1 \
+  --outdir data/md_runs/Hsap_WT/rep1 \
+  --prod-ns 200 --platform CUDA &
+
+# Hsap 4mut (GPU 1)
+CUDA_VISIBLE_DEVICES=1 python scripts/run_md.py \
+  --prmtop data/md_runs/Hsap_4mut/Hsap_4mut.prmtop \
+  --pdb data/md_runs/Hsap_4mut/Hsap_4mut_minimized.pdb \
+  --name Hsap_4mut_rep1 \
+  --outdir data/md_runs/Hsap_4mut/rep1 \
+  --prod-ns 200 --platform CUDA &
+```
 
 ---
 
-*最后更新：2026-04-24 (Rosetta 安装 + FastRelax 突变扫描 + 4mut 对接验证)*
+## 22. Hgal 4mut_rev MD 体系构建（2026-04-24）
+
+### 22.1 决策
+
+用户确认做 Hgal 4mut_rev MD → ✅
+
+### 22.2 构建方法
+
+- 起始结构：Hgal WT Rosetta docking pose (`input_0003`)
+- 突变方法：Bio.PDB in-silico 突变 + PDBFixer 侧链重建
+- 突变位点：S463C, E511K, Y527L, T530K
+
+### 22.3 能量最小化
+
+| 阶段 | 能量 | 说明 |
+|------|------|------|
+| 初始 | **+486,263,037 kJ/mol** | ⚠️ 严重 steric clash（PDBFixer 侧链不理想） |
+| 100-step EM (CPU) | -4,523,463 kJ/mol | clash 大幅缓解 |
+| 1000-step EM (GPU) | **-5,423,698 kJ/mol** | ✅ 稳定 |
+
+**注意**: 初始能量极高，但 EM 后稳定。MD 运行时需要密切监控前 100ps 的能量变化。
+
+### 22.4 文件位置
+
+- `data/md_runs/Hgal_4mut_rev/Hgal_4mut_rev.{prmtop,rst7,minimized.pdb}`
+
+---
+
+## 23. MD 体系总览
+
+| 体系 | 状态 | 起始结构 | EM 后能量 | 文件位置 |
+|------|------|---------|----------|---------|
+| **Hgal WT** | 🟡 3×200ns 运行中 (~153ns) | LightDock best pose | -1.45M kJ/mol | `data/md_runs/Hgal_domain/` |
+| **Hsap WT** | ⏳ 待启动 | Rosetta `hsap_input_0006` | -3.46M kJ/mol | `data/md_runs/Hsap_WT/` |
+| **Hsap 4mut** | ⏳ 待启动 | WT pose + in-silico 突变 | -3.46M kJ/mol | `data/md_runs/Hsap_4mut/` |
+| **Hgal 4mut_rev** | ⏳ 待启动 | WT pose + 反向突变 | -5.42M kJ/mol | `data/md_runs/Hgal_4mut_rev/` |
+
+---
+
+## 24. 启动计划（Hgal 完成后执行）
+
+```bash
+# GPU 0: Hsap WT
+CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
+  --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
+  --pdb data/md_runs/Hsap_WT/Hsap_WT_minimized.pdb \
+  --name Hsap_WT_rep1 --outdir data/md_runs/Hsap_WT/rep1 \
+  --prod-ns 200 --platform CUDA &
+
+# GPU 1: Hsap 4mut
+CUDA_VISIBLE_DEVICES=1 python scripts/run_md.py \
+  --prmtop data/md_runs/Hsap_4mut/Hsap_4mut.prmtop \
+  --pdb data/md_runs/Hsap_4mut/Hsap_4mut_minimized.pdb \
+  --name Hsap_4mut_rep1 --outdir data/md_runs/Hsap_4mut/rep1 \
+  --prod-ns 200 --platform CUDA &
+
+# GPU 2: Hgal 4mut_rev
+CUDA_VISIBLE_DEVICES=2 python scripts/run_md.py \
+  --prmtop data/md_runs/Hgal_4mut_rev/Hgal_4mut_rev.prmtop \
+  --pdb data/md_runs/Hgal_4mut_rev/Hgal_4mut_rev_minimized.pdb \
+  --name Hgal_4mut_rev_rep1 --outdir data/md_runs/Hgal_4mut_rev/rep1 \
+  --prod-ns 200 --platform CUDA &
+```
+
+**时间线**: 3 条轨迹并行 → ~1.3 天后全部完成
+
+---
+
+## 25. 下一步计划
+
+1. **Hgal MD 完成**（预计今晚）→ DCCM + PCA + 氢键追踪
+2. **启动 Hsap WT + Hsap 4mut + Hgal 4mut_rev**（3 GPU 并行）
+3. **Hgal 是否延长到 500ns**（看 DCCM 结果后决策）
+4. **接触图差异分析**（M3 Pro，现有 AF3 结构）
+5. **MM-GBSA**（M3 Pro）
+
+---
+
+*最后更新：2026-04-24 (4 个 MD 体系全部就绪，Hgal 3 rep 运行中，待今晚完成后启动剩余 3 条)*
 *维护者：Kimi Code CLI*
