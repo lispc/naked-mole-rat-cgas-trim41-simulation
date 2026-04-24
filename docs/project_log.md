@@ -1113,3 +1113,66 @@ rep3 的 COM 仅增加 ~2Å，核心高 occupancy 接触在所有 replica 中保
 
 *最后更新：2026-04-24 (Hgal 3×200ns 完成并分析，新批次 3 GPU 并行运行中，等待跨系统比较)*
 *维护者：Kimi Code CLI*
+
+---
+
+## 30. 系统重建与重新启动（2026-04-24 20:15）
+
+### 30.1 发现的问题
+
+**盒子过大**：Hsap / Hgal 4mut_rev 新系统的原子数暴增（237k–367k），导致速度从 156 ns/day 暴跌到 29–52 ns/day。
+
+**根因**：`solvateBox mol OPCBOX 12.0 iso` 生成立方体盒子，且 Hgal 4mut_rev 的 EM 把蛋白质拉变形（Y 方向 +39%），导致盒子 146Å。
+
+**Hsap_WT build 错误**：误用了 Hgal Rosetta pose（`output_global/input_0006.pdb`，573 CA）而非 Hsap pose（`output_hsap_global/hsap_input_0006.pdb`，541 CA）。
+
+**Hgal 4mut_rev build 错误**：build_system_v2.py 用了未突变的 WT pose，生成的是 WT 结构而非 4mut_rev。
+
+### 30.2 修正措施
+
+1. **改用八面体盒子 + 10Å 缓冲**：`solvateOct mol OPC 10.0`
+2. **修正 pose 路径**：Hsap_WT 用 `output_hsap_global/hsap_input_0006.pdb`
+3. **Hgal 4mut_rev 用已突变的 clean pdb**：`Hgal_4mut_rev_clean.pdb`
+4. **EM 策略改进**：对 Hgal 4mut_rev 使用 production system（HBonds constraints）EM 5000 步，避免 backbone 变形
+5. **Hsap_4mut 跳过 heating**：`--skip-heat`（heating 阶段出现 NaN，300K NVT 直接稳定）
+
+### 30.3 最终系统参数
+
+| 系统 | 原子数 | 蛋白残基 | 盒子 | EM 后能量 | 状态 |
+|------|--------|---------|------|----------|------|
+| Hsap_WT | 85,510 | 541 | 111.4Å 八面体 | -1,083M kJ/mol | ✅ Production |
+| Hsap_4mut | 82,402 | 541 | 111.5Å 八面体 | -1,102M kJ/mol | ✅ Production |
+| Hgal_4mut_rev rep1 | 119,942 | 573 | 124.5Å 八面体 | -1,517M kJ/mol | ✅ Production |
+| Hgal_4mut_rev rep2 | 119,942 | 573 | 124.5Å 八面体 | -1,515M kJ/mol | ✅ Production |
+
+### 30.4 GPU 分配
+
+| GPU | 系统 | 状态 |
+|-----|------|------|
+| 0 | Hsap_WT rep1 | 🔄 Production |
+| 1 | Hsap_4mut rep1 | 🔄 Production |
+| 2 | Hgal_4mut_rev rep1 | 🔄 Production |
+| 3 | Hgal_4mut_rev rep2 | 🔄 Production |
+
+### 30.5 Pose 来源说明
+
+- **Hgal WT**：LightDock best pose（已完成 3×200ns）
+- **Hsap WT / 4mut**：Rosetta `hsap_input_0006`
+- **Hgal 4mut_rev**：Rosetta `input_0003`（WT pose + in-silico 反向突变）
+
+**方法学局限**：Hgal WT 与 Hgal 4mut_rev 使用不同 docking 方法的 pose，WT vs 4mut_rev 的比较可能混杂 pose 差异。已通过 2 个 replica 增加 robustness，结论中需明确说明此局限。
+
+### 30.6 预计完成时间
+
+| 系统 | 速度估算 | 200ns ETA |
+|------|---------|----------|
+| Hsap_WT | ~80–100 ns/day | ~2–2.5 天 |
+| Hsap_4mut | ~80–100 ns/day | ~2–2.5 天 |
+| Hgal_4mut_rev (×2) | ~60–80 ns/day | ~2.5–3.5 天 |
+
+**全部完成**：~3 天内（2026-04-27 晚）
+
+---
+
+*最后更新：2026-04-24 (4 系统全部重建完成并启动，4 GPU 全满)*
+*维护者：Kimi Code CLI*

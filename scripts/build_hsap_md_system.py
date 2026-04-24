@@ -71,7 +71,7 @@ source leaprc.water.opc
 mol = loadpdb {pdb_file}
 
 # Solvate
-solvateBox mol OPCBOX 12.0 iso
+solvateOct mol OPC 10.0
 
 # Neutralize and add 150 mM NaCl
 addionsrand mol Na+ 0
