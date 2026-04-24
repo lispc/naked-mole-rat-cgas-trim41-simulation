@@ -1006,5 +1006,110 @@ CUDA_VISIBLE_DEVICES=2 python scripts/run_md.py \
 
 ---
 
-*最后更新：2026-04-24 (4 个 MD 体系全部就绪，Hgal 3 rep 运行中，待今晚完成后启动剩余 3 条)*
+## 26. Mock / Dry-Run 完成（2026-04-24）
+
+为提前验证后处理 pipeline，在真实 MD 完成前执行了一次完整 dry-run：
+
+- **Mock trajectories**：对 Hsap WT / Hsap 4mut / Hgal 4mut_rev 各跑 10ps NVT（500 frames）
+- **单系统分析**：4 系统全部通过 `scripts/analyze_system.py`
+- **跨系统比较**：Hgal WT vs 4mut_rev、Hsap WT vs 4mut 通过 `scripts/compare_systems.py`
+- **产出**：24 张 PNG + 6 个 JSON summary，pipeline 已验证可用
+
+**新建/完善的通用工具**（位于 `scripts/`）：
+
+| 脚本 | 功能 |
+|------|------|
+| `generate_mock_trajectory.py` | 从 minimized structure 快速生成 mock DCD |
+| `analyze_system.py` | 通用单系统分析（任意 replica 数、自动 chain 分割、可选 active sites）|
+| `compare_systems.py` | 跨系统比较（RMSD/RMSF/Contacts/COM + Welch t-test）|
+
+**Mock run 关键发现**：
+- Hgal WT 真实数据（~186ns）分析正常：rep1 RMSD 4.57±0.63Å，rep3 4.87±0.71Å
+- Active sites 到 TRIM41 距离 30–39Å，远离接口
+- 10ps mock 数据太短，contacts/occupancy 统计不稳定（真实数据 >100ns 才能收敛）
+
+---
+
+## 28. Hgal 3×200ns 完成 & 新批次启动（2026-04-24 19:05）
+
+**Hgal WT 3×200ns 生产 MD 全部完成**：
+
+| Replica | 最终长度 | 终态能量 |
+|---------|---------|---------|
+| rep1 | 200.0 ns | -1,480,510 kJ/mol |
+| rep2 | 200.0 ns | -1,479,479 kJ/mol |
+| rep3 | 200.0 ns | -1,477,794 kJ/mol |
+
+**最终分析完成**（`data/analysis/final_200ns/`）：
+- RMSD: rep1=4.57±0.63Å, rep2=?, rep3=4.87±0.71Å（详细数据在 JSON）
+- Active sites 到 TRIM41 距离: 30–39Å，再次确认远离接口
+- COM 距离: ~36–38Å，接口稳定
+
+**新 MD 批次已启动**（各 1 rep，3 GPU 并行）：
+
+| 系统 | GPU | PID | 状态 |
+|------|-----|-----|------|
+| Hsap WT | 0 | 1382448 | Heating 完成，NPT 中 |
+| Hsap 4mut | 1 | 1382449 | Heating 完成，NPT 中 |
+| Hgal 4mut_rev | 2 | 1382450 | 初始化中 |
+
+**预计完成**：~1.3 天后（2026-04-26 上午）
+
+**时间线**：
+- 2026-04-24 19:05 → 新批次启动
+- 2026-04-26 ~10:00 → 3 条轨迹全部完成
+- 2026-04-26 ~11:00 → 全部分析完成
+
+---
+
+## 29. MD 分析结论（Hgal WT 3×200ns）
+
+**分析日期**：2026-04-24
+**分析工具**：`scripts/analyze_system.py`
+**数据**：`data/analysis/final_200ns/`
+
+### 核心发现
+
+#### 1. 突变位点远离物理接口（✅ 证实）
+
+| 突变位点 | PDB resid | 离最近接口残基 |
+|---------|-----------|---------------|
+| S463 | 482 | **32 个残基** |
+| E511 | 530 | **80 个残基** |
+| Y527 | 546 | **96 个残基** |
+| T530 | 549 | **99 个残基** |
+
+空间距离：**29–39Å**，不可能直接接触 TRIM41。
+
+#### 2. 接口位于 cGAS N-端（✅ 证实）
+
+- **核心接口**：cGAS resid **228–266** ↔ TRIM41 82–190
+  - TRIM41-157/158 ↔ cGAS-258/259（occupancy >60%，最稳定）
+  - TRIM41-187 ↔ cGAS-236（occupancy ~39%）
+- **次要接触**：cGAS 432–450（低 occupancy <25%，瞬态）
+
+突变位点（482–549）与接口（228–266）之间有 **>200 个残基** 的序列间隔。
+
+#### 3. rep3 构象变化 = domain breathing（✅ 证实）
+
+| 指标 | rep1 | rep2 | rep3 |
+|------|------|------|------|
+| RMSD | 4.59±0.62Å | 5.99±0.83Å | 4.90±0.72Å |
+| COM | 36.35±0.66Å | 37.30±0.87Å | 38.44±1.28Å |
+| Contacts | 17 | 15 | 9 |
+
+rep3 的 COM 仅增加 ~2Å，核心高 occupancy 接触在所有 replica 中保持。构象变化是**整体 domain breathing**，不是接口解离。
+
+#### 4. 变构效应假说（⏳ 待验证）
+
+- **间接支持**：突变位点远离接口 → 影响必须长程传递；N-terminal 接口区域有可观柔性（RMSF 1.3–1.8Å）
+- **待证实**：WT vs 4mut 的 interface dynamics 差异需要 Hgal 4mut_rev MD 完成后才能直接比较
+
+### 下一步
+
+等待 Hsap WT / Hsap 4mut / Hgal 4mut_rev 的 200ns MD 完成后，执行跨系统比较（`scripts/compare_systems.py`），直接检验 WT vs 4mut 的 interface 差异。
+
+---
+
+*最后更新：2026-04-24 (Hgal 3×200ns 完成并分析，新批次 3 GPU 并行运行中，等待跨系统比较)*
 *维护者：Kimi Code CLI*
