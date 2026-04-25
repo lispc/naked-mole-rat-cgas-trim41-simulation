@@ -61,7 +61,7 @@ def run_us(prmtop_path, rst7_path, center_A, k, name, outdir, gpu_id, em_steps, 
     
     # Production
     prod_steps = int(prod_ns * 1000 / 0.002)
-    dcd_freq = int(0.1 / 0.002)
+    dcd_freq = int(1.0 / 0.002)  # 1ns = 500k steps
     log_freq = int(0.5 / 0.002)
     
     os.makedirs(outdir, exist_ok=True)
