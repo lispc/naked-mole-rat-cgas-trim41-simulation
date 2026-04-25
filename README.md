@@ -62,9 +62,9 @@
 | System | cGAS | TRIM41 | Mutations | Status |
 |--------|------|--------|-----------|--------|
 | Hgal_WT | NMR WT | WT | — | ✅ 3×200ns 完成 + 分析 |
-| Hsap_WT | Human WT | WT | — | 🔄 1×200ns 运行中 |
-| Hsap_4mut | Human → NMR | WT | C463S, K479E, L495Y, K498T | 🔄 1×200ns 运行中 |
-| Hgal_4mut_rev | NMR → Human | WT | S463C, E511K, Y527L, T530K | 🔄 1×200ns 运行中 |
+| Hsap_WT | Human WT | WT | — | ✅ 1×200ns 完成 + 分析 |
+| Hsap_4mut | Human → NMR | WT | C463S, K479E, L495Y, K498T | ✅ 1×200ns 完成 + 分析 |
+| Hgal_4mut_rev | NMR → Human | WT | S463C, E511K, Y527L, T530K | 🔄 2×200ns ~150ns 运行中 |
 
 *NMR = naked mole-rat (Heterocephalus glaber). Paper numbering uses NMR coordinates.*
 
@@ -91,13 +91,36 @@ Physical interface involves cGAS resid **228–266** ↔ TRIM41 82–190:
 
 The C-terminal mutation sites are spatially separated from the interface by the entire cGAS domain.
 
-### Finding 3: Allosteric mechanism hypothesis
+### Finding 3: Hsap systems are much more dynamic than Hgal
 
-Since mutations are far from the interface, their effect on TRIM41 recognition must be **allosteric**:
-- C-terminal 4mut → N-terminal ~211–219 rearrangement (up to 12 Å displacement, per AF3 monomer comparison)
-- → Interface micro-change → altered TRIM41 recognition/ubiquitination efficiency
+| Metric | Hgal_WT | Hsap_WT | Hsap_4mut |
+|--------|---------|---------|-----------|
+| RMSD | 5.16 ± 0.72 Å | **8.94 ± 1.58 Å** | **9.76 ± 2.21 Å** |
+| COM | 37.4 ± 0.9 Å | **46.6 ± 2.4 Å** | **49.0 ± 2.8 Å** |
 
-**Direct test pending**: Hgal WT vs Hgal 4mut_rev MD comparison (expected completion: ~April 26).
+Hsap 4mut makes the complex **even less stable** (RMSD +9%, COM +5%, p < 1e-30).
+
+### Finding 4: Active site distances diverge between species
+
+| Site | Hgal_WT | Hgal_4mut_rev | Hsap_WT | Hsap_4mut |
+|------|---------|---------------|---------|-----------|
+| S463/D431 | 29.4 Å | **18.6 Å** (−10.8) | 29.4 Å | 32.0 Å (+2.6) |
+| E511/K479 | 31.5 Å | **21.9 Å** (−9.7) | 36.6 Å | 40.0 Å (+3.4) |
+
+**Hgal 4mut_rev** brings active sites **closer** to TRIM41; **Hsap 4mut** pushes them **farther**.
+
+### Finding 5: Lys-334 is the top ubiquitination candidate in Hsap
+
+Lysine accessibility analysis reveals **Lys-334** (homologous to Hgal position near the active site cluster) as the closest cGAS Lys to TRIM41 RING:
+- Hsap WT: 10.4 Å | Hsap 4mut: **6.4 Å** (−4.0 Å)
+- 4mut may **concentrate** ubiquitination to this single site.
+
+### Allosteric mechanism hypothesis
+
+Since mutations are far from the interface, their effect must be **allosteric**:
+- C-terminal 4mut → altered global dynamics → changed RING-to-Lys geometry → differential ubiquitination
+
+**In progress**: Umbrella Sampling of RING→Lys-334 distance (2 windows running on GPU 0/1).
 
 ## Quick Start
 
