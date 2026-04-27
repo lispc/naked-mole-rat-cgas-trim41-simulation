@@ -30,7 +30,7 @@ declare -a WINDOWS=(
 LOGFILE="$OUTDIR/scheduler.log"
 mkdir -p "$OUTDIR"
 
-source /home/scroll/miniforge3/etc/profile.d/conda.sh
+source ~/miniforge3/etc/profile.d/conda.sh
 conda activate cgas-md
 
 echo "[$(date)] Scheduler started. Total remaining windows: ${#WINDOWS[@]}" >> "$LOGFILE"

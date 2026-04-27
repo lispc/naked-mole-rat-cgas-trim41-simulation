@@ -45,7 +45,7 @@ def run_cmd(cmd, name, logfile):
 
 def launch_final_analysis():
     """Run full Hgal WT analysis with 200ns data."""
-    cmd = """source /home/scroll/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
+    cmd = """source ~/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
 python scripts/analyze_system.py \
   --system Hgal_WT \
   --prmtop data/md_runs/Hgal_domain/Hgal_domain.prmtop \
@@ -65,7 +65,7 @@ def launch_new_md():
     cmds = []
     
     # Hsap WT on GPU 0
-    cmds.append(("""source /home/scroll/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
+    cmds.append(("""source ~/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
 CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
   --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
   --pdb data/md_runs/Hsap_WT/Hsap_WT_minimized.pdb \
@@ -73,7 +73,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
   --prod-ns 200 --platform CUDA""", "Hsap_WT_MD", "data/md_runs/Hsap_WT/rep1/md_launch.log"))
     
     # Hsap 4mut on GPU 1
-    cmds.append(("""source /home/scroll/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
+    cmds.append(("""source ~/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
 CUDA_VISIBLE_DEVICES=1 python scripts/run_md.py \
   --prmtop data/md_runs/Hsap_4mut/Hsap_4mut.prmtop \
   --pdb data/md_runs/Hsap_4mut/Hsap_4mut_minimized.pdb \
@@ -81,7 +81,7 @@ CUDA_VISIBLE_DEVICES=1 python scripts/run_md.py \
   --prod-ns 200 --platform CUDA""", "Hsap_4mut_MD", "data/md_runs/Hsap_4mut/rep1/md_launch.log"))
     
     # Hgal 4mut_rev on GPU 2
-    cmds.append(("""source /home/scroll/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
+    cmds.append(("""source ~/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md && \
 CUDA_VISIBLE_DEVICES=2 python scripts/run_md.py \
   --prmtop data/md_runs/Hgal_4mut_rev/Hgal_4mut_rev.prmtop \
   --pdb data/md_runs/Hgal_4mut_rev/Hgal_4mut_rev_minimized.pdb \

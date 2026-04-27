@@ -1,7 +1,7 @@
 #!/bin/bash
 # Launch Hsap_4mut US windows across 4 GPUs, 4 at a time
 
-source /home/scroll/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md
+source ~/miniforge3/etc/profile.d/conda.sh && conda activate cgas-md
 
 PRMTOP="data/md_runs/Hsap_4mut/Hsap_4mut.prmtop"
 RST7="data/analysis/final/us_start_Hsap_4mut.rst7"

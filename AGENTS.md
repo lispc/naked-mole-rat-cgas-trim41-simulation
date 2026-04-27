@@ -4,29 +4,29 @@
 
 ### Conda 环境
 
-本项目使用 Miniforge 作为 conda 发行版，安装位置：`/Users/zhangzhuo/miniforge3`
+本项目使用 Miniforge 作为 conda 发行版，安装位置：`~/miniforge3`
 
 | 环境 | 路径 | 用途 |
 |------|------|------|
-| `cgas-md` | `/Users/zhangzhuo/miniforge3/envs/cgas-md` | MD 模拟、轨迹分析 |
-| `py311` | `/Users/zhangzhuo/miniforge3/envs/py311` | LightDock、PyMOL、Biopython |
-| `base` | `/Users/zhangzhuo/miniforge3` | 基础环境 |
+| `cgas-md` | `~/miniforge3/envs/cgas-md` | MD 模拟、轨迹分析 |
+| `rosetta` | `~/miniforge3/envs/rosetta` | PyRosetta、Rosetta 对接 |
+| `base` | `~/miniforge3` | 基础环境 |
 
-**默认使用 conda 环境中的 Python，不要直接使用系统 Python**（如 `/usr/bin/python3`、`/opt/homebrew/bin/python3`）。
+**默认使用 conda 环境中的 Python，不要直接使用系统 Python**。
 
 正确示例：
 ```bash
-/Users/zhangzhuo/miniforge3/bin/conda run -n py311 python3 script.py
+~/miniforge3/bin/conda run -n cgas-md python3 script.py
 # 或先激活环境
-conda activate py311
+conda activate cgas-md
 python3 script.py
 ```
 
 ### PyMOL
 
-PyMOL 安装在 `py311` 环境中：
+PyMOL 安装在 `cgas-md` 环境中：
 ```bash
-/Users/zhangzhuo/miniforge3/bin/conda run -n py311 pymol -cq script.pml
+~/miniforge3/bin/conda run -n cgas-md pymol -cq script.pml
 ```
 
 ---

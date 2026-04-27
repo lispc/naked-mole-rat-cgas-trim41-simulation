@@ -7,7 +7,7 @@ RST7="data/analysis/final/us_start_Hsap_WT.rst7"
 LOG="$OUTDIR/scheduler.log"
 
 mkdir -p "$OUTDIR"
-source /home/scroll/miniforge3/etc/profile.d/conda.sh
+source ~/miniforge3/etc/profile.d/conda.sh
 conda activate cgas-md
 
 echo "[$(date)] Auto-launcher started" >> "$LOG"
