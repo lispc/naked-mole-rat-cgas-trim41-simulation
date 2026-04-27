@@ -70,11 +70,12 @@ hgal_dists, hgal_max, hgal_min = analyze_structure(
     hgal_residues
 )
 
-# Hsap cGAS CTD (WT)
-hsap_residues = {463: 'S', 479: 'E', 495: 'Y', 498: 'T'}
+# Hsap cGAS CTD (WT) — CORRECTED mutations: D431S, K479E, L495Y, K498T
+# NOTE: Old incorrect mapping was C463S/K479E/L495Y/K498T (deleted)
+hsap_residues = {431: 'D', 479: 'K', 495: 'L', 498: 'K'}
 hsap_dists, hsap_max, hsap_min = analyze_structure(
     'structures/af3_raw/job1_Hsap_WT/cgas_CT_200-554.pdb',
-    'H. sapiens cGAS CTD (WT)',
+    'H. sapiens cGAS CTD (WT) — correct sites: D431, K479, L495, K498',
     hsap_residues
 )
 

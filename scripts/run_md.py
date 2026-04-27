@@ -86,7 +86,7 @@ def setup_system(prmtop, pdb, platform_name='auto'):
 
 
 def run_heating(system, topology, positions, platform, props, outdir, name,
-                target_temp=300, steps=50000, step_size=0.002, report_interval=1000):
+                target_temp=300, steps=50000, step_size=0.002, report_interval=1000, seed=None):
     """Stage 1: Heating from 0K to target_temp (NVT)."""
     
     stage_name = f"{name}_heating"
@@ -100,6 +100,8 @@ def run_heating(system, topology, positions, platform, props, outdir, name,
         1.0 / mm.unit.picosecond,
         step_size * mm.unit.picosecond,
     )
+    if seed is not None:
+        integrator.setRandomNumberSeed(seed)
     
     context = mm.Context(system, integrator, platform, props)
     context.setPositions(positions)
@@ -165,7 +167,7 @@ def run_heating(system, topology, positions, platform, props, outdir, name,
 
 
 def run_npt(system, topology, positions, platform, props, outdir, name,
-            steps=50000, step_size=0.002, report_interval=1000):
+            steps=50000, step_size=0.002, report_interval=1000, seed=None):
     """Stage 2: NPT equilibration at 300K, 1 bar."""
     
     stage_name = f"{name}_npt"
@@ -182,6 +184,8 @@ def run_npt(system, topology, positions, platform, props, outdir, name,
         1.0 / mm.unit.picosecond,
         step_size * mm.unit.picosecond,
     )
+    if seed is not None:
+        integrator.setRandomNumberSeed(seed)
     
     context = mm.Context(system, integrator, platform, props)
     context.setPositions(positions)
@@ -237,7 +241,7 @@ def run_npt(system, topology, positions, platform, props, outdir, name,
 
 
 def run_production(system, topology, positions, box, platform, props, outdir, name,
-                   prod_ns=200, step_size=0.002, report_interval=50000):
+                   prod_ns=200, step_size=0.002, report_interval=50000, seed=None):
     """Stage 3: NVT production run."""
     
     steps = int(prod_ns * 1000 / step_size)  # ns -> steps
@@ -254,6 +258,8 @@ def run_production(system, topology, positions, box, platform, props, outdir, na
         1.0 / mm.unit.picosecond,
         step_size * mm.unit.picosecond,
     )
+    if seed is not None:
+        integrator.setRandomNumberSeed(seed)
     
     context = mm.Context(system, integrator, platform, props)
     context.setPositions(positions)
@@ -332,6 +338,8 @@ def main():
     parser.add_argument('--skip-npt', action='store_true', help='Skip NPT equilibration')
     parser.add_argument('--platform', default='auto', choices=['auto', 'CUDA', 'OpenCL', 'CPU', 'Reference'],
                         help='OpenMM platform (auto=best available)')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='Random seed for Langevin integrator (replica independence)')
     args = parser.parse_args()
     
     os.makedirs(args.outdir, exist_ok=True)
@@ -356,14 +364,14 @@ def main():
     if not args.skip_heat:
         current_positions = run_heating(
             system, topology, current_positions, platform, props,
-            args.outdir, args.name
+            args.outdir, args.name, seed=args.seed
         )
     
     # Stage 2: NPT equilibration
     if not args.skip_npt:
         current_positions, current_box = run_npt(
             system, topology, current_positions, platform, props,
-            args.outdir, args.name
+            args.outdir, args.name, seed=args.seed
         )
     
     # Stage 3: Production
@@ -374,7 +382,7 @@ def main():
     
     run_production(
         system, topology, current_positions, current_box, platform, props,
-        args.outdir, args.name, prod_ns=args.prod_ns
+        args.outdir, args.name, prod_ns=args.prod_ns, seed=args.seed
     )
     
     print(f"\n{'='*60}")

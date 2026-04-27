@@ -53,7 +53,7 @@ def analyze_close_frames(prmtop, dcd, cv_path, threshold, outdir, name):
     
     # Selections
     ring = u.select_atoms("resid 1-43 and protein")  # RING domain
-    lys334 = u.select_atoms("resid 334 and protein")  # Lys-334
+    lys334 = u.select_atoms("resid 334 and protein")  # cGAS-Lys315 (topology resid 334)
     cgas = u.select_atoms("resid 219-541 and protein")  # cGAS
     trim41 = u.select_atoms("resid 1-218 and protein")  # TRIM41
     
@@ -94,7 +94,7 @@ def analyze_close_frames(prmtop, dcd, cv_path, threshold, outdir, name):
     interface_counter = Counter(all_contacts_cgas)
     top_interface = interface_counter.most_common(20)
     
-    print(f"\n[{name}] Top RING residues near Lys-334:")
+    print(f"\n[{name}] Top RING residues near cGAS-Lys315:")
     for resid, count in top_ring[:10]:
         print(f"  TRIM41-{resid}: {count} contacts ({count/len(close_frames[:500]):.3f} occupancy)")
     
@@ -122,10 +122,10 @@ def analyze_close_frames(prmtop, dcd, cv_path, threshold, outdir, name):
 # PyMOL script for close-state visualization
 # Load your structure and trajectory, then run this script
 
-# Highlight Lys-334
-select lys334, resi 334
-show sticks, lys334
-color magenta, lys334
+# Highlight cGAS-Lys315
+select lys315, resi 334
+show sticks, lys315
+color magenta, lys315
 
 # Highlight contacting RING residues
 select ring_contacts, resi {'+'.join([str(r) for r, _ in top_ring[:10]])}
@@ -137,7 +137,7 @@ select interface_cgas, resi {'+'.join([str(c) for (_, c), _ in top_interface[:10
 show lines, interface_cgas
 color yellow, interface_cgas
 
-zoom lys334
+zoom lys315
 """
     pymol_path = outdir / f"visualize_close_{name}.pml"
     with open(pymol_path, "w") as f:
@@ -154,7 +154,7 @@ def main():
     parser.add_argument("--cv", required=True, help="CV data file")
     parser.add_argument("--threshold", type=float, default=5.0, help="CV threshold in Å")
     parser.add_argument("--name", required=True)
-    parser.add_argument("--outdir", default="data/analysis/final/us_Hsap_WT_Lys334/close_state")
+    parser.add_argument("--outdir", default="data/analysis/final/us_Hsap_WT_Lys315/close_state")
     args = parser.parse_args()
     
     print(f"[{datetime.now()}] Analyzing close state: {args.name}")

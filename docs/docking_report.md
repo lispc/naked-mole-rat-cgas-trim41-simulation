@@ -271,7 +271,8 @@ lightdock3.py setup.json 200 -c 1 -s fastdfire
 
 **图 2**：
 - Hgal（蓝色）与 Hsap（红色）结构叠加
-- RMSD = 0.78 Å（3592 atoms），整体折叠高度相似
+- **局部 domain 对齐 RMSD = 0.78 Å（3592 atoms）** — 仅核心 β-sheet 区域对齐结果
+- **注意**：全长/CTD 全局 CA RMSD ≈ 20.96 Å（见 interface_analysis_report.md），两物种整体折叠差异显著
 - 活性残基位置差异清晰可见
 
 **图 3**：

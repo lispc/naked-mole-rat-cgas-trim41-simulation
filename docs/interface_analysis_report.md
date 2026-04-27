@@ -263,15 +263,5 @@ Hgal MD 结果**不能直接外推**到 Hsap 的 4mut 机制，因为：
 
 ---
 
-## 七、图表索引
-
-| 图 | 文件路径 | 描述 |
-|---|---------|------|
-| Hgal 界面全景 | `figures/hgal_interface_overview.png` | 红色=实际界面(N端)，蓝色球=活性位点(C端) |
-| Hgal 界面特写 | `figures/hgal_interface_closeup.png` | 界面残基详细视图 |
-| Hgal 活性位点 | `figures/hgal_interface_active_site.png` | 4个位点远离界面 |
-
----
-
 *报告生成：2026-04-23*
 *基于 LightDock best_pose + Rosetta docking output + 序列比对 + 文献全文分析*

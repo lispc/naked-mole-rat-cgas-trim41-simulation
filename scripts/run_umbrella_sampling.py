@@ -47,7 +47,7 @@ def run_us_window(prmtop_path, coord_path, center_A, k, name, outdir, gpu_id=0,
     
     ring_indices, lys_index = find_atom_indices(prmtop, (1, 43), 334, "NZ")
     r0_nm = center_A / 10.0
-    print(f"  RING: {len(ring_indices)} atoms  |  Lys-334 NZ: {lys_index}")
+    print(f"  RING: {len(ring_indices)} atoms  |  cGAS-Lys315 NZ (top resid 334): {lys_index}")
     
     platform = Platform.getPlatformByName("CUDA")
     

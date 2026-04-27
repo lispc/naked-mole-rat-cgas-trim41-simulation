@@ -10,6 +10,9 @@ Generates:
   - Cross-species active site distance comparison (homolog-mapped)
   - Interface contact summary table
   - JSON summary with all statistics
+
+FIXED (2026-04-27): Replaced naive Welch t-test on correlated MD frames
+with effective-sample-size t-test using autocorrelation time estimation.
 """
 import argparse
 import json
@@ -30,9 +33,57 @@ def load_summary(path):
         return json.load(f)
 
 
-def welch_ttest(a, b):
-    t, p = stats.ttest_ind(a, b, equal_var=False)
-    return t, p
+def effective_sample_size(data, max_lag=None):
+    """Estimate effective sample size using integrated autocorrelation time."""
+    data = np.asarray(data, dtype=float)
+    n = len(data)
+    if n < 4:
+        return float(n), 1.0
+    
+    if max_lag is None:
+        max_lag = min(n // 3, 2000)
+    
+    data = data - np.mean(data)
+    c0 = np.mean(data ** 2)
+    if c0 == 0:
+        return float(n), 1.0
+    
+    tau = 1.0
+    for lag in range(0, max_lag - 1, 2):
+        c_lag = np.mean(data[:n-lag] * data[lag:]) / c0
+        c_lag1 = np.mean(data[:n-(lag+1)] * data[lag+1:]) / c0 if lag + 1 < n else 0.0
+        gamma = c_lag + c_lag1
+        if gamma < 0:
+            break
+        tau += 2 * gamma
+    
+    tau = max(tau, 1.0)
+    n_eff = n / tau
+    return float(n_eff), float(tau)
+
+
+def correlated_ttest(a, b):
+    """Welch-style t-test for correlated time series."""
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    
+    n_eff_a, tau_a = effective_sample_size(a)
+    n_eff_b, tau_b = effective_sample_size(b)
+    
+    mean_a, mean_b = np.mean(a), np.mean(b)
+    var_a = np.var(a, ddof=1)
+    var_b = np.var(b, ddof=1)
+    
+    se = np.sqrt(var_a / n_eff_a + var_b / n_eff_b)
+    if se == 0:
+        return 0.0, 1.0, n_eff_a, n_eff_b, tau_a, tau_b
+    
+    t = (mean_a - mean_b) / se
+    num = (var_a / n_eff_a + var_b / n_eff_b) ** 2
+    den = (var_a / n_eff_a) ** 2 / max(n_eff_a - 1, 1) + (var_b / n_eff_b) ** 2 / max(n_eff_b - 1, 1)
+    df = num / den if den > 0 else 1.0
+    p = 2 * (1 - stats.t.cdf(abs(t), df))
+    return float(t), float(p), n_eff_a, n_eff_b, tau_a, tau_b
 
 
 def flatten_replicas(data, key):
@@ -73,12 +124,16 @@ def plot_four_system_rmsd(summaries, names, outdir):
     stats_results = {}
     for i in range(len(names)):
         for j in range(i+1, len(names)):
-            t, p = welch_ttest(all_data[i], all_data[j])
+            t, p, n_eff_i, n_eff_j, tau_i, tau_j = correlated_ttest(all_data[i], all_data[j])
             key = f"{names[i]}_vs_{names[j]}"
-            stats_results[key] = {"t": float(t), "p": float(p),
-                                  "mean_i": float(all_data[i].mean()),
-                                  "mean_j": float(all_data[j].mean())}
-            print(f"    {key}: t={t:.2f}, p={p:.2e}")
+            stats_results[key] = {
+                "t": float(t), "p": float(p),
+                "n_eff_i": float(n_eff_i), "n_eff_j": float(n_eff_j),
+                "tau_i": float(tau_i), "tau_j": float(tau_j),
+                "mean_i": float(all_data[i].mean()),
+                "mean_j": float(all_data[j].mean()),
+            }
+            print(f"    {key}: t={t:.2f}, p={p:.3e}, N_eff={n_eff_i:.0f}/{n_eff_j:.0f}")
     return stats_results
 
 
@@ -106,12 +161,16 @@ def plot_four_system_com(summaries, names, outdir):
         for j in range(i+1, len(names)):
             com_i = flatten_replicas(summaries[i], "com_distances")
             com_j = flatten_replicas(summaries[j], "com_distances")
-            t, p = welch_ttest(com_i, com_j)
+            t, p, n_eff_i, n_eff_j, tau_i, tau_j = correlated_ttest(com_i, com_j)
             key = f"{names[i]}_vs_{names[j]}"
-            stats_results[key] = {"t": float(t), "p": float(p),
-                                  "mean_i": float(com_i.mean()),
-                                  "mean_j": float(com_j.mean())}
-            print(f"    COM {key}: t={t:.2f}, p={p:.2e}")
+            stats_results[key] = {
+                "t": float(t), "p": float(p),
+                "n_eff_i": float(n_eff_i), "n_eff_j": float(n_eff_j),
+                "tau_i": float(tau_i), "tau_j": float(tau_j),
+                "mean_i": float(com_i.mean()),
+                "mean_j": float(com_j.mean()),
+            }
+            print(f"    COM {key}: t={t:.2f}, p={p:.3e}, N_eff={n_eff_i:.0f}/{n_eff_j:.0f}")
     return stats_results
 
 
@@ -125,7 +184,6 @@ def plot_intrinsic_rmsf_delta(summary_wt, summary_mut, name_wt, name_mut, outdir
     rmsf_mut = np.array(mut["rmsf_vals"])
     
     if len(resids) != len(rmsf_mut):
-        # interpolate mutant onto WT grid
         from scipy.interpolate import interp1d
         mut_resids = np.array(mut["rmsf_resids"])
         f = interp1d(mut_resids, rmsf_mut, kind="linear", bounds_error=False, fill_value=0)
@@ -158,9 +216,7 @@ def compare_active_sites(summaries, names, outdir):
     Compare active site distances across all four systems.
     Homolog mapping: Hgal S463↔Hsap D431, E511↔K479, Y527↔L495, T530↔K498
     """
-    # Hgal sites
     hgal_sites = ["S463", "E511", "Y527", "T530"]
-    # Hsap sites
     hsap_sites = ["D431", "K479", "L495", "K498"]
     
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -180,7 +236,6 @@ def compare_active_sites(summaries, names, outdir):
         labels = []
         
         for name, summary, color in zip(names, summaries, colors):
-            # Find matching site
             first_rep = list(summary.values())[0]
             sites = first_rep.get("active_sites", {})
             
@@ -191,7 +246,6 @@ def compare_active_sites(summaries, names, outdir):
             else:
                 continue
             
-            # Flatten across replicas
             vals = []
             for rep in summary.values():
                 vals.extend(rep["active_sites"][site_name]["values"])

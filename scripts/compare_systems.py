@@ -9,6 +9,9 @@ Compares WT vs mutant (or any two systems) on:
   - Active site distances (if available)
 
 Outputs: comparison plots + statistical test results.
+
+FIXED (2026-04-27): Replaced naive Welch t-test on correlated MD frames
+with effective-sample-size t-test using autocorrelation time estimation.
 """
 import argparse
 import json
@@ -28,10 +31,73 @@ def load_summary(path):
         return json.load(f)
 
 
-def welch_ttest(a, b):
-    """Welch's t-test (unequal variances)."""
-    t, p = stats.ttest_ind(a, b, equal_var=False)
-    return t, p
+def effective_sample_size(data, max_lag=None):
+    """Estimate effective sample size using integrated autocorrelation time.
+    
+    Uses Geyer's initial positive sequence estimator on the normalized
+    autocorrelation function.  For MD time series the adjacent frames are
+    highly correlated, so the effective N is much smaller than len(data).
+    """
+    data = np.asarray(data, dtype=float)
+    n = len(data)
+    if n < 4:
+        return float(n), 1.0
+    
+    if max_lag is None:
+        max_lag = min(n // 3, 2000)
+    
+    data = data - np.mean(data)
+    c0 = np.mean(data ** 2)
+    if c0 == 0:
+        return float(n), 1.0
+    
+    tau = 1.0
+    for lag in range(0, max_lag - 1, 2):
+        c_lag = np.mean(data[:n-lag] * data[lag:]) / c0
+        c_lag1 = np.mean(data[:n-(lag+1)] * data[lag+1:]) / c0 if lag + 1 < n else 0.0
+        gamma = c_lag + c_lag1
+        if gamma < 0:
+            break
+        tau += 2 * gamma
+    
+    tau = max(tau, 1.0)
+    n_eff = n / tau
+    return float(n_eff), float(tau)
+
+
+def correlated_ttest(a, b):
+    """Welch-style t-test for correlated time series.
+    
+    Computes autocorrelation time for each series, derives effective
+    sample size (N_eff = N / tau), and performs Welch's t-test on the
+    effective samples.
+    
+    Returns:
+        t, p, n_eff_a, n_eff_b, tau_a, tau_b
+    """
+    a = np.asarray(a, dtype=float)
+    b = np.asarray(b, dtype=float)
+    
+    n_eff_a, tau_a = effective_sample_size(a)
+    n_eff_b, tau_b = effective_sample_size(b)
+    
+    mean_a, mean_b = np.mean(a), np.mean(b)
+    var_a = np.var(a, ddof=1)
+    var_b = np.var(b, ddof=1)
+    
+    se = np.sqrt(var_a / n_eff_a + var_b / n_eff_b)
+    if se == 0:
+        return 0.0, 1.0, n_eff_a, n_eff_b, tau_a, tau_b
+    
+    t = (mean_a - mean_b) / se
+    
+    # Welch-Satterthwaite df with effective N
+    num = (var_a / n_eff_a + var_b / n_eff_b) ** 2
+    den = (var_a / n_eff_a) ** 2 / max(n_eff_a - 1, 1) + (var_b / n_eff_b) ** 2 / max(n_eff_b - 1, 1)
+    df = num / den if den > 0 else 1.0
+    
+    p = 2 * (1 - stats.t.cdf(abs(t), df))
+    return float(t), float(p), n_eff_a, n_eff_b, tau_a, tau_b
 
 
 def compare_rmsd(data_a, data_b, name_a, name_b, outdir):
@@ -62,30 +128,35 @@ def compare_rmsd(data_a, data_b, name_a, name_b, outdir):
     ax.set_ylabel("RMSD (Å)")
     ax.set_title("RMSD comparison")
     
-    t, p = welch_ttest(all_rmsd_a, all_rmsd_b)
-    fig.suptitle(f"RMSD: {name_a} vs {name_b} (Welch t={t:.2f}, p={p:.2e})", fontsize=11)
+    t, p, n_eff_a, n_eff_b, tau_a, tau_b = correlated_ttest(all_rmsd_a, all_rmsd_b)
+    fig.suptitle(
+        f"RMSD: {name_a} vs {name_b}\n"
+        f"t={t:.2f}, p={p:.3e}  (N_eff={n_eff_a:.0f}/{n_eff_b:.0f}, τ={tau_a:.1f}/{tau_b:.1f} frames)",
+        fontsize=10
+    )
     fig.tight_layout()
     fig.savefig(outdir / f"compare_{name_a}_vs_{name_b}_rmsd.png", dpi=200)
     plt.close(fig)
-    print(f"  Saved RMSD comparison (p={p:.2e})")
-    return {"rmsd_t": float(t), "rmsd_p": float(p)}
+    print(f"  Saved RMSD comparison (p={p:.3e}, N_eff={n_eff_a:.0f}/{n_eff_b:.0f})")
+    return {
+        "rmsd_t": float(t), "rmsd_p": float(p),
+        "rmsd_n_eff_a": float(n_eff_a), "rmsd_n_eff_b": float(n_eff_b),
+        "rmsd_tau_a": float(tau_a), "rmsd_tau_b": float(tau_b),
+    }
 
 
 def compare_rmsf(data_a, data_b, name_a, name_b, outdir):
     """RMSF difference map."""
-    # Use first replica from each (or average if multiple)
     first_a = list(data_a.values())[0]
     first_b = list(data_b.values())[0]
     
     resids_a = np.array(first_a["rmsf_resids"])
     resids_b = np.array(first_b["rmsf_resids"])
     
-    # Interpolate to common grid if needed (should be same for same species)
     if len(resids_a) == len(resids_b) and np.allclose(resids_a, resids_b):
         resids = resids_a
         drmsf = np.array(first_b["rmsf_vals"]) - np.array(first_a["rmsf_vals"])
     else:
-        # Interpolate B onto A's grid
         from scipy.interpolate import interp1d
         f = interp1d(resids_b, first_b["rmsf_vals"], kind="linear", bounds_error=False, fill_value=0)
         resids = resids_a
@@ -103,7 +174,6 @@ def compare_rmsf(data_a, data_b, name_a, name_b, outdir):
     plt.close(fig)
     print(f"  Saved ΔRMSF plot")
     
-    # Report significant changes (> 1Å)
     sig_idx = np.where(np.abs(drmsf) > 1.0)[0]
     print(f"    Residues with |ΔRMSF| > 1.0 Å: {len(sig_idx)}")
     return {"drmsf": drmsf.tolist(), "resids": resids.tolist()}
@@ -111,7 +181,6 @@ def compare_rmsf(data_a, data_b, name_a, name_b, outdir):
 
 def compare_contacts(data_a, data_b, name_a, name_b, outdir):
     """Compare interface contacts between systems."""
-    # Aggregate occupancy across replicas
     def aggregate_occupancy(data):
         all_occ = {}
         total_frames = 0
@@ -133,7 +202,6 @@ def compare_contacts(data_a, data_b, name_a, name_b, outdir):
     vals_b = [occ_b.get(k, 0) for k in all_keys]
     diff = np.array(vals_b) - np.array(vals_a)
     
-    # Top lost / gained contacts
     lost = sorted([(all_keys[i], diff[i]) for i in range(len(all_keys)) if diff[i] < -0.1],
                   key=lambda x: x[1])[:10]
     gained = sorted([(all_keys[i], diff[i]) for i in range(len(all_keys)) if diff[i] > 0.1],
@@ -148,7 +216,6 @@ def compare_contacts(data_a, data_b, name_a, name_b, outdir):
         t, c = key.split('_')
         print(f"      TRIM41-{t} -- cGAS-{c}: Δ={d:.3f}")
     
-    # Scatter plot
     fig, ax = plt.subplots(figsize=(7, 7))
     ax.scatter(vals_a, vals_b, alpha=0.3, s=10)
     ax.plot([0, 1], [0, 1], "k--", lw=0.5)
@@ -183,9 +250,13 @@ def compare_com(data_a, data_b, name_a, name_b, outdir):
     fig.savefig(outdir / f"compare_{name_a}_vs_{name_b}_com.png", dpi=200)
     plt.close(fig)
     
-    t, p = welch_ttest(all_com_a, all_com_b)
-    print(f"  Saved COM comparison (p={p:.2e})")
-    return {"com_t": float(t), "com_p": float(p)}
+    t, p, n_eff_a, n_eff_b, tau_a, tau_b = correlated_ttest(all_com_a, all_com_b)
+    print(f"  Saved COM comparison (p={p:.3e}, N_eff={n_eff_a:.0f}/{n_eff_b:.0f})")
+    return {
+        "com_t": float(t), "com_p": float(p),
+        "com_n_eff_a": float(n_eff_a), "com_n_eff_b": float(n_eff_b),
+        "com_tau_a": float(tau_a), "com_tau_b": float(tau_b),
+    }
 
 
 def main():

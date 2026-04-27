@@ -215,7 +215,8 @@ def run_scan(name, pdb_file, mutations, output_dir="structures/docking/rosetta")
 
 
 def main():
-    base = "/Users/zhangzhuo/repos/personal/naked-mole-rat-cgas-trim41-simulation"
+    import os
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
     # Hgal: 4mut_rev = S463D + E511K + Y527L + T530K
     hgal_mutations = [(463, 'D'), (511, 'K'), (527, 'L'), (530, 'K')]

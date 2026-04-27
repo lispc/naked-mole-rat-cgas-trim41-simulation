@@ -12,7 +12,7 @@ def run_us(prmtop_path, rst7_path, center_A, k, name, outdir, gpu_id, em_steps, 
     prmtop = app.AmberPrmtopFile(prmtop_path)
     inpcrd = app.AmberInpcrdFile(rst7_path)
     
-    # Find RING CA and Lys-334 NZ
+    # Find RING CA and cGAS-Lys315 NZ (topology resid 334 = cGAS-315)
     topology = prmtop.topology
     ring_ca = []
     lys_nz = None
@@ -23,7 +23,7 @@ def run_us(prmtop_path, rst7_path, center_A, k, name, outdir, gpu_id, em_steps, 
         if res.index + 1 == 334 and atom.name == "NZ":
             lys_nz = atom.index
     
-    print(f"  RING CA: {len(ring_ca)}  |  Lys-334 NZ: {lys_nz}")
+    print(f"  RING CA: {len(ring_ca)}  |  cGAS-Lys315 NZ (top resid 334): {lys_nz}")
     
     system = prmtop.createSystem(
         nonbondedMethod=app.PME,

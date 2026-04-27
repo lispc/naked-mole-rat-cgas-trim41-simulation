@@ -138,7 +138,7 @@ def plot_pmf(bin_centers, pmf, pmf_std, outpath, title="PMF"):
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(bin_centers, pmf, lw=2, color="#2c3e50")
     ax.fill_between(bin_centers, pmf - pmf_std, pmf + pmf_std, alpha=0.3, color="#3498db")
-    ax.set_xlabel("RING → Lys-334 distance (Å)")
+    ax.set_xlabel("RING → cGAS-Lys315 distance (Å)")
     ax.set_ylabel("PMF (kcal/mol)")
     ax.set_title(title)
     ax.axhline(0, color="black", lw=0.5, ls="--")
@@ -162,8 +162,8 @@ def main():
     parser.add_argument("--skip", type=int, default=0,
                         help="Skip first N frames from each window")
     parser.add_argument("--bootstrap", type=int, default=100)
-    parser.add_argument("--outdir", default="data/analysis/final/us_Hsap_WT_Lys334")
-    parser.add_argument("--title", default="Hsap_WT Lys-334 US PMF")
+    parser.add_argument("--outdir", default="data/analysis/final/us_Hsap_WT_Lys315")
+    parser.add_argument("--title", default="Hsap_WT cGAS-Lys315 US PMF")
     args = parser.parse_args()
     
     outdir = Path(args.outdir)
