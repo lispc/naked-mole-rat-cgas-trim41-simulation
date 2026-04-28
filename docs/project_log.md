@@ -1686,3 +1686,84 @@ dcd_freq = int(1000.0 / 0.002)   # 500,000 steps = 1 ns ✅
 2. **k 值测试结果**：决定 US 是否用更低 k（200–500）重跑
 3. **盐浓度**：论文中声明 neutral only（已决定）
 
+
+---
+
+## 三十九、分析脚本开发与初步测试（2026-04-28）
+
+### 39.1 脚本编写
+
+完成 3 个核心分析脚本：
+
+| 脚本 | 功能 | 依赖 |
+|------|------|------|
+| `scripts/run_mmpbsa.py` | MM-GBSA / MM-PBSA 结合能计算 + 残基分解 | AmberTools MMPBSA.py |
+| `scripts/run_pca.py` | 主成分分析（PCA），输出 variance 图、projections 图、PC mode PDBs | MDAnalysis, numpy |
+| `scripts/run_dccm.py` | 动态互相关矩阵（DCCM），输出热图、高相关残基对 | MDAnalysis, numpy |
+
+**已知问题 & 修复**：
+1. `run_mmpbsa.py` 需要处理 OPC 水模型的 EP（extra point）虚拟原子 → 增加自动干燥拓扑生成（cpptraj parmstrip + IFBOX=0）
+2. `run_pca.py` 的 `write_pc_modes` 函数 PDB 残基名写入有 bug → 已修复（`MDAnalysis.empty()` 需正确传递 `n_residues` 和 `atom_resindex`）
+3. `run_pca.py` 未保存 eigenvectors → 后续修复
+
+### 39.2 初步测试结果（Hsap_WT rep1/rep2）
+
+#### MM-GBSA（Hsap_WT rep1, 200ns, 100 frames, interval=20）
+
+| 能量项 | Δ (kcal/mol) | Std.Dev. | 解读 |
+|--------|-------------|----------|------|
+| VDWAALS | **−38.6** | ±10.4 | 范德华有利 |
+| EEL | **+428.9** | ±121.2 | 气相静电极强排斥 |
+| EGB | **−397.7** | ±127.5 | GB 溶剂化几乎完全抵消静电 |
+| ESURF | **−6.4** | ±1.6 | 表面积项略不利 |
+| **ΔG_binding** | **−13.86** | ±7.59 | 净结合自由能 |
+
+**结论**：界面为**疏水驱动**。大量电荷排斥被溶剂屏蔽后，范德华相互作用提供主要结合力。−13.9 kcal/mol 对应亲和力约 **K_d ~ 1 μM**。
+
+#### PCA（Hsap_WT rep2, ~45ns, backbone）
+
+| PC | 方差占比 | 累计 | 特征值 (Å²) |
+|----|---------|------|------------|
+| PC1 | **52.9%** | 52.9% | 13620 |
+| PC2 | 12.7% | 65.6% | 3262 |
+| PC3 | 8.2% | 73.8% | 2101 |
+
+**PC1 运动模式**（比较投影最小/最大帧）：
+- 主导运动：**TRIM41 N-terminal loop（residues ~104–118）的剧烈摆动**
+- Top 位移：Ser114 **36.9 Å**，Ser115 **35.6 Å**，Gly109 **33.8 Å**
+- 区域平均：TRIM41 mean=6.47Å, max=36.9Å；cGAS mean=10.99Å, max=24.4Å
+
+**结论**：PC1 不是界面开合，而是一个**远离界面的表面 loop 的内在柔性运动**。
+
+#### DCCM（Hsap_WT rep2, ~45ns, CA atoms）
+
+**Cross-interface 动态耦合**（TRIM41 ↔ cGAS）：
+
+| TRIM41 残基 | cGAS 残基 | 相关系数 C |
+|------------|----------|-----------|
+| Lys-209 | **Lys-333** | **0.930** |
+| Gly-210 | **Lys-333** | **0.924** |
+| Ala-208 | **Lys-333** | **0.890** |
+| Ala-43 | **Lys-333** | **0.875** |
+
+**cGAS-Lys-333 是界面的"动态耦合枢纽"**——与 TRIM41 的多个远端残基同步运动。
+
+Cross-interface 统计：
+- |C|>0.7: 15,442 对
+- |C|>0.5: 33,880 对
+- Mean |C|: 0.315
+
+### 39.3 当前执行状态
+
+| 任务 | 状态 | 资源 |
+|------|------|------|
+| Hsap_WT rep2/rep3 MD | 🟢 运行中 (~50ns) | GPU 0-1 |
+| Hsap_4mut rep2/rep3 MD | 🟢 运行中 (~50ns) | GPU 2-3 |
+| Hgal_WT build | ✅ 完成 | CPU |
+| Hgal_4mut_rev build | ✅ 完成 | CPU |
+
+**待启动**：
+- Hgal 两个系统 3×200ns MD（需等 Hsap replica 完成释放 GPU，约 1.5 天后）
+- 批量 MM-GBSA（4 系统 × 3 replica）
+- 批量 PCA/DCCM（完整 200ns 数据）
+

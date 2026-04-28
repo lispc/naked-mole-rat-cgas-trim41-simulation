@@ -1,163 +1,293 @@
 #!/usr/bin/env python3
-"""Analyze Rosetta docking results and compare with previous best poses.
+"""
+Analyze Rosetta docking results:
+1. Parse scorefiles to find best decoy (lowest total_score)
+2. Calculate CA-RMSD between new best pose and previous best pose
+3. Classify: PASS (<2Å), GRAY (2-5Å), FAIL (>5Å)
 
 Usage:
-    python scripts/analyze_docking_results.py \
-        --scorefile structures/docking/rosetta/hgal_WT_global.sc \
-        --output-dir structures/docking/rosetta/output_hgal_WT_global \
-        --prev-best structures/docking/rosetta/input.pdb \
-        --system Hgal_WT
+  python scripts/analyze_docking_results.py
 """
-import argparse
-import os
 import numpy as np
 from pathlib import Path
 
 
-def read_pdb_atoms(filepath):
-    """Read CA atoms from PDB."""
-    atoms = {}
-    with open(filepath) as f:
+# ---------------------------------------------------------------------------
+# Kabsch RMSD (no Biopython/MDAnalysis dependency)
+# ---------------------------------------------------------------------------
+
+def parse_pdb_coords(pdb_path, atom_name="CA", chain=None):
+    """Extract (x,y,z) coordinates for specified atom type from PDB."""
+    coords = []
+    with open(pdb_path) as f:
         for line in f:
-            if line.startswith("ATOM") and line[12:16].strip() == "CA":
-                chain = line[21].strip()
-                resi = int(line[22:26].strip())
-                x = float(line[30:38])
-                y = float(line[38:46])
-                z = float(line[46:54])
-                atoms[(chain, resi)] = np.array([x, y, z])
-    return atoms
+            if not line.startswith("ATOM") and not line.startswith("HETATM"):
+                continue
+            if len(line) < 54:
+                continue
+            rec_atom = line[12:16].strip()
+            rec_chain = line[21:22].strip() if len(line) > 21 else ""
+            x = float(line[30:38])
+            y = float(line[38:46])
+            z = float(line[46:54])
+            if rec_atom == atom_name:
+                if chain is None or rec_chain == chain:
+                    coords.append([x, y, z])
+    return np.array(coords, dtype=float)
 
 
-def calc_rmsd(atoms1, atoms2):
-    common = set(atoms1.keys()) & set(atoms2.keys())
-    if len(common) == 0:
-        return None
-    coords1 = np.array([atoms1[k] for k in sorted(common)])
-    coords2 = np.array([atoms2[k] for k in sorted(common)])
-    c1 = coords1.mean(axis=0)
-    c2 = coords2.mean(axis=0)
-    coords1 -= c1
-    coords2 -= c2
-    H = coords1.T @ coords2
+def kabsch_rmsd(P, Q):
+    """Calculate RMSD between two sets of points after optimal rotation."""
+    # Center
+    Pc = P - P.mean(axis=0)
+    Qc = Q - Q.mean(axis=0)
+    # Covariance matrix
+    H = Pc.T @ Qc
+    # SVD
     U, S, Vt = np.linalg.svd(H)
-    R = Vt.T @ U.T
-    if np.linalg.det(R) < 0:
+    # Rotation matrix
+    d = np.linalg.det(Vt.T @ U.T)
+    if d < 0:
         Vt[-1, :] *= -1
-        R = Vt.T @ U.T
-    coords2_rot = coords2 @ R
-    rmsd = np.sqrt(np.mean(np.sum((coords1 - coords2_rot)**2, axis=1)))
-    return rmsd
+    R = Vt.T @ U.T
+    # Rotate P
+    P_rot = Pc @ R
+    # RMSD
+    rmsd = np.sqrt(((P_rot - Qc) ** 2).sum() / len(P))
+    return float(rmsd)
 
 
-def parse_scorefile(scorefile):
-    """Parse Rosetta scorefile and return list of (name, score, I_sc)."""
-    results = []
-    with open(scorefile) as f:
+def ca_rmsd(path_a, path_b):
+    """CA-RMSD between two PDBs (all chains)."""
+    coords_a = parse_pdb_coords(path_a, "CA")
+    coords_b = parse_pdb_coords(path_b, "CA")
+    if len(coords_a) != len(coords_b):
+        n = min(len(coords_a), len(coords_b))
+        print(f"  Warning: mismatched CA counts ({len(coords_a)} vs {len(coords_b)}), using first {n}")
+        coords_a = coords_a[:n]
+        coords_b = coords_b[:n]
+    return kabsch_rmsd(coords_a, coords_b)
+
+
+# ---------------------------------------------------------------------------
+# Scorefile parsing
+# ---------------------------------------------------------------------------
+
+def parse_scorefile(sc_path):
+    """Parse Rosetta scorefile, return list of (total_score, desc) sorted by score."""
+    entries = []
+    with open(sc_path) as f:
         for line in f:
             if line.startswith("SCORE:") and "description" not in line:
                 parts = line.split()
                 if len(parts) < 3:
                     continue
-                score = float(parts[1])
-                desc = parts[-1]
-                # Find I_sc if present
-                isc = None
-                for i, p in enumerate(parts):
-                    if p == "I_sc":
-                        if i + 1 < len(parts):
-                            isc = float(parts[i + 1])
-                        break
-                results.append((desc, score, isc))
-    return results
+                try:
+                    total_score = float(parts[1])
+                    desc = parts[-1]
+                    entries.append((total_score, desc))
+                except ValueError:
+                    continue
+    entries.sort(key=lambda x: x[0])
+    return entries
 
 
-def analyze_docking(scorefile, output_dir, prev_best_pdb, system_name):
-    results = parse_scorefile(scorefile)
-    if not results:
-        print(f"No results found in {scorefile}")
-        return
-    
-    # Sort by total_score (lower is better)
-    results.sort(key=lambda x: x[1])
-    
+# ---------------------------------------------------------------------------
+# Main analysis
+# ---------------------------------------------------------------------------
+
+def analyze_system(name, new_sc, new_pdb_dir, old_sc_or_pdb, old_is_pdb=False):
     print(f"\n{'='*60}")
-    print(f"  Rosetta Docking Analysis: {system_name}")
+    print(f"System: {name}")
     print(f"{'='*60}")
-    print(f"  Total decoys: {len(results)}")
-    
-    best_name, best_score, best_isc = results[0]
-    worst_score = results[-1][1]
-    
-    print(f"\n  Score range: {best_score:.1f} to {worst_score:.1f} (span={worst_score-best_score:.1f})")
-    isc_str = f"{best_isc:.1f}" if best_isc is not None else "N/A"
-    print(f"  Best decoy: {best_name} (score={best_score:.1f}, I_sc={isc_str})")
-    
-    # Top 5
-    print(f"\n  Top 5 decoys:")
-    for i, (name, score, isc) in enumerate(results[:5]):
-        isc_str = f"{isc:.1f}" if isc is not None else "N/A"
-        print(f"    {i+1}. {name}: score={score:.1f}, I_sc={isc_str}")
-    
-    # Compare with previous best
-    if prev_best_pdb and os.path.exists(prev_best_pdb):
-        best_pdb = os.path.join(output_dir, f"{best_name}.pdb")
-        if os.path.exists(best_pdb):
-            prev_atoms = read_pdb_atoms(prev_best_pdb)
-            new_atoms = read_pdb_atoms(best_pdb)
-            rmsd = calc_rmsd(prev_atoms, new_atoms)
-            
-            print(f"\n  Comparison with previous best pose:")
-            print(f"    Previous: {prev_best_pdb}")
-            print(f"    New best: {best_pdb}")
-            print(f"    CA-RMSD:  {rmsd:.2f} Å")
-            
-            if rmsd < 2.0:
-                verdict = "PASS — Interface modes are essentially identical. Existing MD/US data likely valid."
-            elif rmsd < 5.0:
-                verdict = "CAUTION — Moderate interface differences. MD may have self-corrected. Assess interface contacts."
+
+    # New docking
+    new_entries = parse_scorefile(new_sc)
+    if not new_entries:
+        print("  ERROR: No entries in new scorefile")
+        return None
+    new_best_score, new_best_desc = new_entries[0]
+    print(f"  New best: {new_best_desc}  total_score={new_best_score:.3f}  (n={len(new_entries)})")
+
+    # Top 5 new
+    print("  New top 5:")
+    for score, desc in new_entries[:5]:
+        marker = " <<< BEST" if desc == new_best_desc else ""
+        print(f"    {desc}: {score:.3f}{marker}")
+
+    new_best_pdb = Path(new_pdb_dir) / f"{new_best_desc}.pdb"
+    if not new_best_pdb.exists():
+        # Try with _0001 suffix
+        alt = Path(new_pdb_dir) / f"{new_best_desc}_0001.pdb"
+        if alt.exists():
+            new_best_pdb = alt
+        else:
+            print(f"  ERROR: PDB not found: {new_best_pdb}")
+            return None
+
+    # Old docking
+    if old_is_pdb:
+        old_best_pdb = Path(old_sc_or_pdb)
+        old_best_score = None
+        old_best_desc = Path(old_sc_or_pdb).name
+        print(f"  Old best: {old_best_desc}  (LightDock best_pose)")
+    else:
+        old_entries = parse_scorefile(old_sc_or_pdb)
+        if not old_entries:
+            print("  ERROR: No entries in old scorefile")
+            return None
+        old_best_score, old_best_desc = old_entries[0]
+        print(f"  Old best: {old_best_desc}  total_score={old_best_score:.3f}  (n={len(old_entries)})")
+        old_pdb_dir = Path(old_sc_or_pdb).parent
+        old_best_pdb = old_pdb_dir / f"{old_best_desc}.pdb"
+        if not old_best_pdb.exists():
+            alt = old_pdb_dir / f"{old_best_desc}_0001.pdb"
+            if alt.exists():
+                old_best_pdb = alt
             else:
-                verdict = "FAIL — Different interface mode. MD/US must be rerun with new pose."
-            
-            print(f"    Verdict:  {verdict}")
-            
-            return {
-                "system": system_name,
-                "n_decoys": len(results),
-                "best_score": best_score,
-                "best_isc": best_isc,
-                "score_span": worst_score - best_score,
-                "rmsd_to_prev": rmsd,
-                "verdict": verdict,
-                "best_pdb": best_pdb,
-            }
-    
+                print(f"  ERROR: Old PDB not found: {old_best_pdb}")
+                return None
+
+    # CA-RMSD
+    print(f"\n  Calculating CA-RMSD...")
+    print(f"    New: {new_best_pdb}")
+    print(f"    Old: {old_best_pdb}")
+    rmsd = ca_rmsd(str(new_best_pdb), str(old_best_pdb))
+
+    # Verdict
+    if rmsd < 2.0:
+        verdict = "PASS"
+        action = "Keep existing MD data"
+    elif rmsd < 5.0:
+        verdict = "GRAY"
+        action = "Analyze interface contacts; may need MD rerun"
+    else:
+        verdict = "FAIL"
+        action = "Rerun MD with new pose"
+
+    print(f"\n  >>> CA-RMSD = {rmsd:.2f} Å  →  {verdict}")
+    print(f"  >>> Action: {action}")
+
     return {
-        "system": system_name,
-        "n_decoys": len(results),
-        "best_score": best_score,
-        "best_isc": best_isc,
-        "score_span": worst_score - best_score,
-        "best_pdb": os.path.join(output_dir, f"{best_name}.pdb"),
+        "system": name,
+        "new_best": new_best_desc,
+        "new_score": float(new_best_score),
+        "old_best": old_best_desc,
+        "old_score": float(old_best_score) if old_best_score else None,
+        "rmsd": rmsd,
+        "verdict": verdict,
+        "action": action,
     }
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scorefile", required=True)
-    parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--prev-best", default=None, help="Previous best pose for RMSD comparison")
-    parser.add_argument("--system", required=True)
-    args = parser.parse_args()
-    
-    result = analyze_docking(args.scorefile, args.output_dir, args.prev_best, args.system)
-    
-    if result:
-        import json
-        out_json = os.path.join(args.output_dir, f"{args.system}_analysis.json")
-        with open(out_json, 'w') as f:
-            json.dump(result, f, indent=2)
-        print(f"\n  Saved: {out_json}")
+    base = Path("structures/docking/rosetta")
+
+    systems = [
+        {
+            "name": "Hgal_WT",
+            "new_sc": base / "hgal_WT_global.sc",
+            "new_pdb_dir": base / "output_hgal_WT_global",
+            "old_sc_or_pdb": "structures/docking/lightdock/Hgal_domain/best_pose.pdb",
+            "old_is_pdb": True,
+        },
+        {
+            "name": "Hgal_4mut_rev",
+            "new_sc": base / "hgal_4mut_rev_global.sc",
+            "new_pdb_dir": base / "output_hgal_4mut_rev_global",
+            "old_sc_or_pdb": base / "output_global/global.sc",
+            "old_is_pdb": False,
+        },
+        {
+            "name": "Hsap_WT",
+            "new_sc": base / "hsap_WT_global.sc",
+            "new_pdb_dir": base / "output_hsap_WT_global",
+            "old_sc_or_pdb": base / "output_hsap_global/hsap_global.sc",
+            "old_is_pdb": False,
+        },
+        {
+            "name": "Hsap_4mut",
+            "new_sc": base / "hsap_4mut_global.sc",
+            "new_pdb_dir": base / "output_hsap_4mut_global",
+            "old_sc_or_pdb": base / "hsap_4mut_global.sc",  # Same file? Need to check
+            "old_is_pdb": False,
+        },
+    ]
+
+    # Special case: Hsap_4mut old may have its own scorefile
+    old_hsap_4mut_sc = base / "output_hsap_4mut_global/hsap_4mut_global.sc"
+    if old_hsap_4mut_sc.exists():
+        systems[3]["old_sc_or_pdb"] = old_hsap_4mut_sc
+    else:
+        # Old Hsap_4mut was already nstruct=100, but we need to check if it's the same run
+        # For now, compare new best within the same scorefile (self-consistency check)
+        print("WARNING: Hsap_4mut old scorefile not found. Will compare new best vs 2nd best as sanity check.")
+        systems[3]["old_sc_or_pdb"] = base / "hsap_4mut_global.sc"
+
+    results = []
+    for sys in systems:
+        if sys["name"] == "Hsap_4mut" and not old_hsap_4mut_sc.exists():
+            # Self-comparison: compare best vs 2nd best
+            print(f"\n{'='*60}")
+            print(f"System: Hsap_4mut (self-comparison: best vs 2nd best)")
+            print(f"{'='*60}")
+            entries = parse_scorefile(sys["new_sc"])
+            if len(entries) >= 2:
+                best_score, best_desc = entries[0]
+                second_score, second_desc = entries[1]
+                best_pdb = sys["new_pdb_dir"] / f"{best_desc}.pdb"
+                second_pdb = sys["new_pdb_dir"] / f"{second_desc}.pdb"
+                if not best_pdb.exists():
+                    alt = sys["new_pdb_dir"] / f"{best_desc}_0001.pdb"
+                    if alt.exists():
+                        best_pdb = alt
+                if not second_pdb.exists():
+                    alt = sys["new_pdb_dir"] / f"{second_desc}_0001.pdb"
+                    if alt.exists():
+                        second_pdb = alt
+                if best_pdb.exists() and second_pdb.exists():
+                    rmsd = ca_rmsd(str(best_pdb), str(second_pdb))
+                    print(f"  Best: {best_desc} ({best_score:.3f})")
+                    print(f"  2nd:  {second_desc} ({second_score:.3f})")
+                    print(f"  Self CA-RMSD = {rmsd:.2f} Å")
+                    results.append({
+                        "system": "Hsap_4mut",
+                        "new_best": best_desc,
+                        "new_score": best_score,
+                        "old_best": second_desc,
+                        "old_score": second_score,
+                        "rmsd": rmsd,
+                        "verdict": "SELF_CHECK",
+                        "action": "Old docking was already nstruct=100; self-consistency check only",
+                    })
+            continue
+
+        res = analyze_system(
+            sys["name"],
+            sys["new_sc"],
+            sys["new_pdb_dir"],
+            sys["old_sc_or_pdb"],
+            sys["old_is_pdb"],
+        )
+        if res:
+            results.append(res)
+
+    # Summary table
+    print(f"\n{'='*60}")
+    print("SUMMARY")
+    print(f"{'='*60}")
+    print(f"{'System':<16} {'RMSD(Å)':<10} {'Verdict':<8} {'Action'}")
+    print("-" * 60)
+    for r in results:
+        print(f"{r['system']:<16} {r['rmsd']:<10.2f} {r['verdict']:<8} {r['action']}")
+
+    # Save JSON
+    import json
+    out = Path("data/analysis/docking_comparison_0428.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nSaved: {out}")
 
 
 if __name__ == "__main__":
