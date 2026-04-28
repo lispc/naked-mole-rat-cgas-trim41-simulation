@@ -55,9 +55,11 @@ def run_wham(window_data, bin_edges, max_iter=10000, tol=1e-6):
         N[i, :] = counts
     
     # Bias potential matrix U[i, j] = 0.5 * k_i * (bin_center_j - center_i)^2
+    # Convert k from kJ/mol/nm^2 (OpenMM) to kJ/mol/A^2: 1 nm = 10 A -> k_A = k_nm / 100
     U = np.zeros((n_windows, n_bins))
     for i, wd in enumerate(window_data):
-        U[i, :] = 0.5 * wd["k"] * (bin_centers - wd["center"])**2
+        k_A = wd["k"] / 100.0
+        U[i, :] = 0.5 * k_A * (bin_centers - wd["center"])**2
     
     # Initialize free energy shifts f_i = 0
     f = np.zeros(n_windows)
@@ -73,8 +75,7 @@ def run_wham(window_data, bin_edges, max_iter=10000, tol=1e-6):
         # New f_i
         f_new = np.zeros(n_windows)
         for i in range(n_windows):
-            # sum over bins of N_i,j / denom * exp(-beta*(U_i,j - f_i))
-            # Actually: exp(f_i) = sum_j [N_total,j / denom * exp(-beta*U_i,j)]
+            # sum over bins of N_i,j / denom * exp(-beta*U_i,j)
             integrand = np.zeros(n_bins)
             for j in range(n_bins):
                 if N[:, j].sum() > 0:
@@ -96,13 +97,14 @@ def run_wham(window_data, bin_edges, max_iter=10000, tol=1e-6):
     # Compute PMF
     pmf = np.zeros(n_bins)
     for j in range(n_bins):
-        if denom[j] > 0:
+        if denom[j] > 0 and N[:, j].sum() > 0:
             pmf[j] = -KB * T * np.log(denom[j])
         else:
             pmf[j] = np.nan
     
     # Shift PMF so that minimum = 0
-    pmf = pmf - np.nanmin(pmf)
+    if not np.all(np.isnan(pmf)):
+        pmf = pmf - np.nanmin(pmf)
     
     # Convert to kcal/mol for output
     pmf = pmf / 4.184
