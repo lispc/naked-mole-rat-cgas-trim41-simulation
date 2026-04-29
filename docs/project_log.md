@@ -1835,3 +1835,163 @@ Cross-interface 统计：
 - 是否补充磷酸化/TRIM41-二聚体定向模拟？
 - 叙事方向：坚持"稳定结合态比较"还是转向"解离动力学比较"？
 
+
+---
+
+## 四十三、6 Replica 批量分析与聚类（2026-04-29）
+
+### 43.1 批量分析完成
+
+对全部 6 个 Hsap replica（WT rep1-3 + 4mut rep1-3，各 200ns）执行了统一分析。
+
+| Replica | RMSD | COM | Unbound% | Bound% | 备注 |
+|---------|------|-----|----------|--------|------|
+| WT_rep1 | 8.94 | 46.8 | 34.6% | 5.7% | 部分解离 |
+| WT_rep2 | 7.84 | 45.1 | 13.5% | 2.3% | 少量解离 |
+| WT_rep3 | 12.03 | 44.4 | 1.3% | 0.2% | 基本未解离 |
+| 4mut_rep1 | 9.76 | 49.2 | 75.7% | 0.7% | 快速解离 |
+| 4mut_rep2 | 7.12 | 42.0 | 0% | 6.6% | 未解离 |
+| 4mut_rep3 | 8.00 | 40.6 | 0% | 40.2% | 基本稳定 |
+
+**关键发现**：Replica 间方差巨大。4mut_rep1 解离最快，但 4mut_rep2/rep3 反而比 WT 更稳定。说明系统存在多个亚稳态，初始条件（种子）决定落入哪个 basin。
+
+### 43.2 高斯混合模型聚类（GMM, k=7）
+
+基于 8 维特征（COM、min_CA_dist、Rg、RMSD、4 个突变位点距离）对 12000 帧聚类。
+
+**三大主要亚稳态**：
+
+| Cluster | 占比 | COM | min CA | Rg | RMSD | 状态 |
+|---------|------|-----|--------|----|------|------|
+| C1 | 20.8% | 40.8 | 4.3 | 28.9 | 7.3 | 最稳定结合 |
+| C4 | 27.0% | 43.1 | 4.1 | 29.8 | 7.2 | 稳定结合 |
+| C2 | 30.3% | 48.7 | 4.7 | 32.3 | 9.8 | 扩展/解离 |
+
+**各 Replica 的 Cluster 归宿**：
+
+| Replica | 主要 Cluster | 占比 |
+|---------|-------------|------|
+| WT_rep1 | C2 | 91.3% |
+| WT_rep2 | C4 | 63.6% |
+| WT_rep3 | C0 | 81.8% |
+| 4mut_rep1 | C2 | 90.5% |
+| 4mut_rep2 | C4 | 91.6% |
+| 4mut_rep3 | C1 | 97.8% |
+
+**汇总统计（WT vs 4mut 跨 replica）**：
+
+| Cluster | WT 合计 | 4mut 合计 |
+|---------|--------|----------|
+| C1 (最稳定) | 12.5% | **37.2%** |
+| C4 (稳定) | 21.2% | **34.6%** |
+| C2 (解离) | 30.5% | 30.3% |
+| C0/C3/C5/C6 (松散/过渡) | **35.8%** | ~0% |
+
+**关键发现**：
+- **4mut 有 71.8% 的帧处于 C1/C4 稳定态，WT 仅 33.7%**
+- WT 有 35.8% 的帧处于松散/过渡态，4mut 几乎没有
+- 亚稳态之间转换极少（自转换 >98%），200ns 不足以跨越能垒
+- PCA 显示 PC1 (56.3%) 对应解离/结合主轴，4mut 更集中在紧凑区域
+
+**这与 Chen 论文"4mut 削弱相互作用"的表述形成张力**，可能的解释：
+1. 缺少磷酸化/染色质，模拟环境与真实细胞不同
+2. "削弱"指的是泛素化效率而非物理结合强度
+3. C1/C4 可能是"非功能性"结合态
+
+### 43.3 C1 vs C4 构象差异分析（2026-04-29）
+
+对 GMM 聚类的两个主要稳定态 C1（4mut_rep3 主导，1955 帧，COM=40.66Å）和 C4（4mut_rep2+WT_rep2，3105 帧，COM=43.08Å）进行深层构象比较。
+
+**界面残基对**：两 cluster 共享 6 对共同核心接触（cGAS209-TRIM332、cGAS143-TRIM312 等），距离几乎相同（<0.1Å 差异）。说明 C1/C4 的差异不是"结合 vs 不结合"，而是**同一结合面上的不同构象微调**。
+
+**突变位点距离差异**：
+
+| 位点 | C1 均值 | C4 均值 | 差异 | 备注 |
+|------|---------|---------|------|------|
+| D431 (S463→D) | ~27.5Å | ~30.0Å | C1 近 2.5Å | 新负电荷更近 |
+| **K479 (E511→K)** | **~24.5Å** | **~27.0Å** | **C1 近 2.5Å** | 新正电荷显著更近 |
+| L495 (Y527→L) | ~10.2Å | ~9.2Å | C4 近 1.0Å | 唯一反例 |
+| **K498 (T530→K)** | **~8.5Å** | **~9.8Å** | **C1 近 1.3Å** | 新正电荷显著更近 |
+
+**RMSF 差异**：C1 中 cGAS（特别是 N-端和中段 loop）的 RMSF 显著高于 C4（N-端 ~30Å vs ~14Å）。即 **C1 界面更紧凑，但 cGAS 本身更"floppy"**。
+
+**"Tight-but-Floppy" 假说**：
+- 4mut 引入的 K479/K498 在 C1 中更靠近 TRIM41，可能通过静电吸引将复合物拉入更紧凑的 basin
+- 但紧凑界面同时伴随 cGAS 内部柔性的增加
+- 若 TRIM41 的 E3 泛素连接酶活性需要 cGAS 维持特定刚性构象，则 4mut 虽增强物理结合，却可能因增加 cGAS 柔性而降低泛素化效率——这与 Chen 2025 "weakening" 不矛盾，属于 **binding ≠ function** 现象
+
+**产出文件**：
+- `data/analysis/hsap_batch/c1_c4_analysis/c1_c4_interface_pairs.png`
+- `data/analysis/hsap_batch/c1_c4_analysis/c1_c4_mutation_distances.png`
+- `data/analysis/hsap_batch/c1_c4_analysis/c1_c4_rmsf.png`
+
+---
+
+## 四十四、GROMACS 重跑计划（2026-04-29）
+
+### 44.1 动机
+
+- 用独立 MD 引擎（GROMACS 2026.0）重跑 Hsap_WT 和 Hsap_4mut 各 2 replica，验证 OpenMM 结果的可重复性
+- 比较 GROMACS（CPU/GPU）与 OpenMM（GPU）的绝对速度和 ns/day
+- Hgal MD 暂停，优先完成方法学交叉验证
+
+### 44.2 实施与关键问题
+
+**环境管理**：`cgas-md` 环境保留 AmberTools + OpenMM，`gmx` 环境单独安装 GROMACS 2026.0 CUDA（`mamba create -n gmx`），避免依赖冲突。
+
+**转换路径**：`cpptraj → rst7` 丢失截角八面体 box 信息，导致 GROMACS 初始能量 1.18e+17 kJ/mol。**改用 MDAnalysis 直接从 DCD 读取坐标 + box，经 parmed 写 GRO**，验证 OpenMM PE = -1,070,818 kJ/mol，GROMACS EM PE = -1,094,790 kJ/mol（一致）。
+
+**运行状态**（4 replica，各 1 GPU）：
+
+| Replica | 阶段 | GPU | 状态 |
+|---------|------|-----|------|
+| Hsap_WT rep1 | Production (200ns) | 0 | 🟢 运行中 (~10.7ns) |
+| Hsap_WT rep2 | Production (200ns) | 1 | 🟢 运行中 (~11.0ns) |
+| Hsap_4mut rep1 | Production (200ns) | 2 | 🟢 运行中 (~11.2ns) |
+| Hsap_4mut rep2 | Production (200ns) | 3 | 🟢 运行中 (~11.3ns) |
+
+**性能对比（NPT 阶段，85k–86k 原子）**：
+
+| 引擎 | 平台 | 性能 |
+|------|------|------|
+| OpenMM | CUDA (RTX 3090) | ~240–300 ns/day |
+| GROMACS 2026.0 | CUDA (RTX 3090) | ~188–193 ns/day |
+
+GROMACS 比 OpenMM 慢约 **25–35%**，可能原因：AMBER 力场非 GROMACS 原生优化、virtual sites (EPW) 限制 GPU update、单 replica 单 GPU 未充分利用并行。
+
+**实际 Production 性能**：188–192 ns/day（与 NPT 阶段持平）。
+**预计完成**：全部 4 个 replica 约 **25–27 小时**（WT rep1 落后 ~1 小时，因重启）。
+**产出路径**：`data/md_runs_gmx/*/rep*/prod.xtc`、`data/analysis/hsap_batch_gmx/`
+
+### 44.3 Partial 结果分析（~10ns）
+
+对 GROMACS 已生成的 ~10ns partial 轨迹运行了 `batch_analyze_hsap_gmx.py`（改编自 OpenMM 版，关键修改：`resindex` 替代 `resid` 以适配 GROMACS resid 重置）。
+
+**GROMACS vs OpenMM 同期（前 10ns）对比**：
+
+| Metric | OpenMM WT rep1 | GROMACS WT rep1 | 差异 |
+|--------|---------------|-----------------|------|
+| RMSD (COM-aligned) | 6.71 ± 2.01 Å | 22.61 ± 2.68 Å | **GROMACS 高 3.4×** |
+| COM | 46.8 Å (200ns 末) | 38.99 ± 1.09 Å | 仍在 bound 区 |
+| Rg | ~28–30 Å | 31.13 ± 0.61 Å | 相近 |
+| Bound% | 5.7% (200ns) | 86.4% (~10ns) | 时间尺度不同 |
+
+**关键发现**：
+- **RMSD 异常高**：GROMACS 前 10ns 的蛋白 RMSD (~22Å) 远超 OpenMM 同期 (~7Å)。原因可能包括：(a) AMBER 力场参数在 GROMACS 中的 1-4/dihedral 实现差异；(b) LINCS (vs SHAKE) 约束精度；(c) virtual sites CPU update 导致的数值漂移。
+- **界面接触保持**：min CA 距离 4.2–4.8Å，COM 35–42Å，系统仍处于 bound/transition 态，未解离。
+- **4mut Rg 更大**：4mut rep1/rep2 的 Rg (32.97/34.36Å) > WT (29.68/31.13Å)，与 OpenMM 趋势一致。
+
+**GPU 显存对比**：
+
+| 引擎 | 显存/进程 | 关键限制 |
+|------|----------|----------|
+| OpenMM | ~362 MiB | 全部在 GPU（CUDA update + PME + nonbonded） |
+| GROMACS | ~312 MiB | `Update task can not run on GPU`（virtual sites 限制，坐标更新在 CPU） |
+
+GROMACS 显存略低，但 CPU-GPU 数据往返开销可能是性能差距（~25–35%）的主因。
+
+### 44.4 待完成
+
+- 200ns Production 完成后完整批量分析与 OpenMM 结果系统对比
+- Hgal 跨物种比较（系统已就绪，GROMACS 验证后视情况启动）
+
