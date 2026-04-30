@@ -145,5 +145,39 @@
 
 ---
 
+## 六、项目当前进度（2026-04-30）
+
+### 已完成
+
+| 阶段 | 任务 | 结果 |
+|------|------|------|
+| 结构预测 | AlphaFold3 (4 systems) | ✅ 完成，详见 `docs/af3_report.md` |
+| 分子对接 | ClusPro (Hsap_WT/Hsap_4mut/Hgal_WT/Hgal_4mut_rev) | ✅ 完成，详见 `docs/docking_report.md` |
+| MD 准备 | OpenMM 体系构建 (prmtop/rst7) | ✅ 4 物种 × 3 reps |
+| MD 生产 | OpenMM Hsap_WT 200ns × 3 reps | ✅ 完成 |
+| MD 生产 | OpenMM Hgal_WT 200ns × 3 reps | ✅ 完成 |
+| 磷酸化 | S305-phos 体系构建 + EM | ✅ 完成 |
+| 磷酸化 | OpenMM S305-phos 200ns × 3 reps | 🔄 ~15.5ns/200ns，运行中 |
+| GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，但数据不可靠 |
+| GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 ~9.8ns/200ns，运行中 |
+
+### 关键发现
+
+1. **GROMACS 与 OpenMM 差异**: 旧 GROMACS（parmed 转换）RMSD 是 OpenMM 的 3-4×，根本原因是 CMAP 残基特异性丢失（14 types → 1 type）。已用 GROMACS 2026 原生 `amber19sb.ff` 修复，验证运行中。
+2. **磷酸化位点**: S305（CHK2 靶点）是当前构建体（200-522）内唯一可模拟的磷酸化位点。
+3. **S305-phos 构建**: 需先能量最小化（-215k → -1033k kJ/mol）再运行 MD，否则 heating 阶段 NaN。
+
+### 下一步
+
+| 优先级 | 任务 |
+|--------|------|
+| 🔴 高 | 等待 S305-phos 3× replica 完成（~12h） |
+| 🔴 高 | 等待 GROMACS 2026 验证完成（~32h），对比 RMSD |
+| 🟡 中 | 构建 S305E 体系 + 3× replica MD |
+| 🟡 中 | 分析已完成数据：Hsap_WT vs Hgal_WT vs 4mut |
+| 🟢 低 | 磷酸化 vs 磷酸模拟（S305-phos vs S305E）对比分析 |
+
+---
+
 *文档创建时间：2026-04-22*
-*供下次讨论使用*
+*更新时间：2026-04-30*

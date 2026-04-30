@@ -84,12 +84,18 @@ PyMOL 安装在 `cgas-md` 环境中：
 - 约束：HBonds
 
 ### GROMACS
-- 力场：通过 parmed 转换保留 AMBER 参数
+- 力场：通过 parmed 转换保留 AMBER 参数（**转换后必须运行 `fix_gromacs_cmap.py` 修复 CMAP 残基特异性**）
 - 积分器：md (leap-frog)，步长 2fs
 - 温度：v-rescale，tau_t=1.0 ps
-- 压力：C-rescale，tau_p=5.0 ps，isotropic
-- 非键截断：PME，rcoulomb=1.0 nm，rvdw=1.0 nm (plain cutoff)
-- 约束：LINCS，h-bonds
+- 压力：Production 阶段 **NVT** (`pcoupl = no`)，与 OpenMM 一致
+- 非键截断：PME，rcoulomb=1.0 nm，rvdw=1.0 nm，vdw-modifier = Potential-shift-Verlet
+- 约束：LINCS，`lincs-iter=2, lincs-order=6`（提高精度）
+
+### GROMACS CMAP 修复
+- **问题**：parmed 将 ff19SB 的 14 种残基特异性 CMAP types 错误压缩为 1 种 (`C N XC C N`)
+- **后果**：RMSD 系统性偏高 ~4×，解离行为定性不同
+- **修复**：`python scripts/fix_gromacs_cmap.py --top input.top --prmtop ref.prmtop --out fixed.top`
+- **原理**：将 CA 类型从 `XC` 改为 `XC{n}` (n=0-13)，在 `[cmaptypes]` 中定义 14 种独立的 grid
 
 ### 轨迹保存
 - OpenMM：每 10 ps 一帧（`reportInterval=5000`），DCD 格式
@@ -107,6 +113,15 @@ PyMOL 安装在 `cgas-md` 环境中：
 - **DCD vs XTC**：OpenMM 的 DCD 是未压缩二进制，可以内存映射随机访问；GROMACS 的 XTC 需要解压缩，I/O 开销大
 
 ---
+
+## 磷酸化 MD 规范
+
+- 磷酸化残基命名（生理 pH 7.4，双负离子）：`SER → SEP`, `THR → TPO`, `TYR → PTR`
+- 力场加载：`source leaprc.phosaa19SB`（ff19SB 优化参数）
+- 结构准备：PyMOL Builder 添加 PO₃ → 修改残基名 → `pdb4amber --reduce` → `tleap`
+- 关键位点：S305（cGAS NTase 域，CHK2 磷酸化促进 TRIM41 结合）
+- 注意：`pdb4amber`/`reduce` **不会自动识别磷酸化**，必须手动添加磷酸基团并修改残基名
+- 详细方案：`docs/phosphorylation_md_plan.md`
 
 ## 分析规范
 

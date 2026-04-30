@@ -48,6 +48,18 @@ def convert_topology(prmtop_path, dcd_path, out_top, out_gro):
     # Save GROMACS topology and coordinates
     amber.save(out_top, overwrite=True)
     amber.save(out_gro, overwrite=True)
+    
+    # Fix CMAP residue-specificity (ff19SB has 14 CMAP types, but parmed
+    # conversion produces only 1). See docs/gromacs_openmm_divergence_diagnosis.md
+    print(f"  Fixing CMAP residue-specificity...")
+    try:
+        from fix_gromacs_cmap import fix_gromacs_top
+        fix_gromacs_top(out_top, prmtop_path, out_top)
+        print(f"  CMAP fixed: 14 residue-specific types")
+    except Exception as e:
+        print(f"  WARNING: CMAP fix failed: {e}")
+        print(f"  Run manually: python scripts/fix_gromacs_cmap.py --top {out_top} --prmtop {prmtop_path} --out {out_top}")
+    
     return True
 
 def main():

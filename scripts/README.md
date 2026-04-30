@@ -11,7 +11,8 @@
 | `build_system.py` | 从 LightDock pose 用 tleap 构建溶剂化体系 (ff19SB + OPC)，OpenMM 验证 | Active |
 | `build_system_v2.py` | 改进版 builder，支持截角八面体、可配置缓冲层、保守 EM + 骨架位置限制 | **推荐** |
 | `build_hsap_md_system.py` | 从 Rosetta docking pose 构建 Hsap 体系 (pdb4amber + tleap) | Active，基本被 v2 取代 |
-| `convert_amber_to_gromacs.py` | AMBER prmtop + DCD → GROMACS `.top` + `.gro` (MDAnalysis + parmed，保留 EPW) | Active |
+| `convert_amber_to_gromacs.py` | AMBER prmtop + DCD → GROMACS `.top` + `.gro` (MDAnalysis + parmed，保留 EPW)。**转换后自动修复 CMAP 残基特异性** | Active |
+| `fix_gromacs_cmap.py` | 修复 parmed 转换丢失的 ff19SB CMAP 残基特异性：14 types → 14 residue-specific `XC{n}` atom types + cmaptypes | Active |
 | `prepare_rosetta_input.py` | 合并受体/配体 PDB，分配 chain ID，供 Rosetta 对接使用 | Active |
 | `prepare_4mut_docking_input.py` | 将突变体 cGAS CTD 通过 Kabsch 对齐到 WT 坐标，再与 TRIM41 SPRY 合并 | Active |
 | `verify_openmm.py` | 验证 OpenMM 安装并 benchmark 各平台 (CUDA/OpenCL/CPU) | Active |
@@ -87,6 +88,7 @@
 | `batch_analyze_hsap_v2.py` | 轻量优化版，仅用 CA 界面指标，避免重循环 | **推荐** |
 | `batch_analyze_hsap_gmx.py` | GROMACS 版批量分析（适配 gro+xtc，`resindex` 替代 `resid`） | Active（慢，XTC + in_memory 瓶颈） |
 | `batch_analyze_hsap_gmx_fast.py` | GROMACS 快速版：流式读取 + numpy Kabsch 对齐，避免 in_memory 陷阱 | **推荐** |
+| `batch_analyze_hsap_gmx_fast_v2.py` | 待创建：修复 Kabsch 对齐 bug（原脚本使用 `R.T` 而非 `R`），支持修复后 CMAP 拓扑分析 | Planned |
 | `quick_compare_rep1.py` | WT rep1 vs 4mut rep1 快速并排对比 (RMSD/COM/Rg/RMSF) | Active |
 | `cluster_analysis.py` | 基于 GMM 的聚类分析（COM、min CA、Rg、RMSD、突变位点距离） | Active |
 | `analyze_c1_c4.py` | C1 vs C4 亚稳态深度构象比较：界面残基对、突变位点环境、RMSF | Active |
