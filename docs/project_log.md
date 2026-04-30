@@ -1963,23 +1963,28 @@ GROMACS 比 OpenMM 慢约 **25–35%**，可能原因：AMBER 力场非 GROMACS 
 **预计完成**：全部 4 个 replica 约 **25–27 小时**（WT rep1 落后 ~1 小时，因重启）。
 **产出路径**：`data/md_runs_gmx/*/rep*/prod.xtc`、`data/analysis/hsap_batch_gmx/`
 
-### 44.3 Partial 结果分析（~10ns）
+### 44.3 200ns 完整分析 vs OpenMM
 
-对 GROMACS 已生成的 ~10ns partial 轨迹运行了 `batch_analyze_hsap_gmx.py`（改编自 OpenMM 版，关键修改：`resindex` 替代 `resid` 以适配 GROMACS resid 重置）。
+**分析脚本优化**：原 `batch_analyze_hsap_gmx.py` 使用 `in_memory=True` 对 XTC 解压缩，导致 4 replica × 20,000 帧分析 10+ 小时未完成。**重写为 `batch_analyze_hsap_gmx_fast.py`**：流式读取 + numpy Kabsch 对齐，全程仅需 **~15 分钟**。
 
-**GROMACS vs OpenMM 同期（前 10ns）对比**：
+**GROMACS vs OpenMM 200ns 对比**：
 
-| Metric | OpenMM WT rep1 | GROMACS WT rep1 | 差异 |
-|--------|---------------|-----------------|------|
-| RMSD (COM-aligned) | 6.71 ± 2.01 Å | 22.61 ± 2.68 Å | **GROMACS 高 3.4×** |
-| COM | 46.8 Å (200ns 末) | 38.99 ± 1.09 Å | 仍在 bound 区 |
-| Rg | ~28–30 Å | 31.13 ± 0.61 Å | 相近 |
-| Bound% | 5.7% (200ns) | 86.4% (~10ns) | 时间尺度不同 |
+| Replica | 引擎 | RMSD | COM | Rg | Bound% | Unbound% |
+|---------|------|------|-----|----|--------|----------|
+| WT rep1 | OpenMM | 8.94 Å | 46.8 Å | ~29 Å | 5.7% | **34.6%** |
+| WT rep1 | GROMACS | **30.91 ± 7.28 Å** | 39.17 ± 4.48 Å | 35.32 Å | 54.7% | **0.2%** |
+| WT rep2 | OpenMM | 7.84 Å | 45.1 Å | ~29 Å | 2.3% | 13.5% |
+| WT rep2 | GROMACS | **32.72 ± 6.02 Å** | 31.09 ± 7.61 Å | 32.93 Å | 68.6% | **0%** |
+| 4mut rep1 | OpenMM | 9.76 Å | 49.2 Å | ~29 Å | 0.7% | **75.7%** |
+| 4mut rep1 | GROMACS | **35.30 ± 6.39 Å** | 31.87 ± 6.20 Å | 36.21 Å | 55.1% | **0%** |
+| 4mut rep2 | OpenMM | 7.12 Å | 42.0 Å | ~29 Å | 6.6% | 0% |
+| 4mut rep2 | GROMACS | **29.20 ± 2.06 Å** | 35.64 ± 4.35 Å | 31.75 Å | 72.5% | **0%** |
 
 **关键发现**：
-- **RMSD 异常高**：GROMACS 前 10ns 的蛋白 RMSD (~22Å) 远超 OpenMM 同期 (~7Å)。原因可能包括：(a) AMBER 力场参数在 GROMACS 中的 1-4/dihedral 实现差异；(b) LINCS (vs SHAKE) 约束精度；(c) virtual sites CPU update 导致的数值漂移。
-- **界面接触保持**：min CA 距离 4.2–4.8Å，COM 35–42Å，系统仍处于 bound/transition 态，未解离。
-- **4mut Rg 更大**：4mut rep1/rep2 的 Rg (32.97/34.36Å) > WT (29.68/31.13Å)，与 OpenMM 趋势一致。
+- **RMSD 系统性高 3–4×**：GROMACS 的蛋白 RMSD (~30–35Å) 远超 OpenMM (~7–10Å)，是引擎间系统性差异（力场实现、LINCS vs SHAKE、virtual sites CPU update）。
+- **解离行为截然不同**：OpenMM 中 WT rep1 有 34.6% unbound、4mut rep1 有 75.7% unbound；**GROMACS 几乎全部 replica 停留在 bound/transition 态，unbound 几乎为 0**。说明 GROMACS 对同一 AMBER 力场的蛋白-蛋白相互作用预测更强，或构象采样路径不同。
+- **4mut Rg 更大**：GROMACS 中 4mut (32–36Å) > WT (29–32Å)，与 OpenMM 趋势一致。
+- **Replica 间方差大**：GMM (k=7) 聚类显示各 replica 分散在多个 cluster，与 OpenMM 一致。
 
 **GPU 显存对比**：
 
@@ -1988,10 +1993,12 @@ GROMACS 比 OpenMM 慢约 **25–35%**，可能原因：AMBER 力场非 GROMACS 
 | OpenMM | ~362 MiB | 全部在 GPU（CUDA update + PME + nonbonded） |
 | GROMACS | ~312 MiB | `Update task can not run on GPU`（virtual sites 限制，坐标更新在 CPU） |
 
-GROMACS 显存略低，但 CPU-GPU 数据往返开销可能是性能差距（~25–35%）的主因。
+**产出文件**：
+- `data/analysis/hsap_batch_gmx/*_data.npz` (4 个)
+- `data/analysis/hsap_batch_gmx/gmx_comparison.png`
 
 ### 44.4 待完成
 
-- 200ns Production 完成后完整批量分析与 OpenMM 结果系统对比
-- Hgal 跨物种比较（系统已就绪，GROMACS 验证后视情况启动）
+- Hgal 跨物种比较（系统已就绪）
+- GROMACS 与 OpenMM 差异的根因分析（力场实现、约束算法、积分器）
 

@@ -101,6 +101,11 @@ PyMOL 安装在 `cgas-md` 环境中：
 - GROMACS 的 XTC 坐标精度为 0.001 nm（0.01Å），对 RMSD 分析影响可忽略
 - `convert_amber_to_gromacs.py` 使用 MDAnalysis 直接从 DCD 读取坐标+box，避免 `cpptraj → rst7` 的 box 信息丢失问题
 
+### GROMACS 分析性能陷阱
+- **XTC + `in_memory=True` 是致命组合**：MDAnalysis 的 `AlignTraj(..., in_memory=True)` 对 XTC 压缩格式需要逐帧解压缩 85k 原子到内存，4 replica × 20,000 帧可耗时 **10+ 小时**
+- **推荐方案**：使用 `batch_analyze_hsap_gmx_fast.py` 的流式读取 + numpy Kabsch 对齐，全程仅需 **~15 分钟**
+- **DCD vs XTC**：OpenMM 的 DCD 是未压缩二进制，可以内存映射随机访问；GROMACS 的 XTC 需要解压缩，I/O 开销大
+
 ---
 
 ## 分析规范

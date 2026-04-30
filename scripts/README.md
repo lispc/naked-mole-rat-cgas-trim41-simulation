@@ -85,7 +85,8 @@
 |------|------|------|
 | `batch_analyze_hsap.py` | 6 replica (WT+4mut × 3 rep) 完整批量分析，含 O(N²) 界面指标、GMM 聚类 | Active |
 | `batch_analyze_hsap_v2.py` | 轻量优化版，仅用 CA 界面指标，避免重循环 | **推荐** |
-| `batch_analyze_hsap_gmx.py` | GROMACS 版批量分析（适配 gro+xtc，`resindex` 替代 `resid`） | Active |
+| `batch_analyze_hsap_gmx.py` | GROMACS 版批量分析（适配 gro+xtc，`resindex` 替代 `resid`） | Active（慢，XTC + in_memory 瓶颈） |
+| `batch_analyze_hsap_gmx_fast.py` | GROMACS 快速版：流式读取 + numpy Kabsch 对齐，避免 in_memory 陷阱 | **推荐** |
 | `quick_compare_rep1.py` | WT rep1 vs 4mut rep1 快速并排对比 (RMSD/COM/Rg/RMSF) | Active |
 | `cluster_analysis.py` | 基于 GMM 的聚类分析（COM、min CA、Rg、RMSD、突变位点距离） | Active |
 | `analyze_c1_c4.py` | C1 vs C4 亚稳态深度构象比较：界面残基对、突变位点环境、RMSF | Active |
