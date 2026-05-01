@@ -31,7 +31,7 @@ AF3 单体预测已完成（`structures/af3_raw/Hsap_cGAS_4mut/`）。
 - LightDock 对接：**0/25 有效 poses**
 - **结论**：4 个突变**无法**改变人类 cGAS 的分散几何
 
-详见：`docs/af3_mutation_analysis.md`
+详见：`docs/10-reports/af3_mutation_analysis.md`
 
 ### 对假说的影响
 ❌ "突变驱动几何改变"假说**不成立**。空间几何由 backbone 折叠决定，4 个点突变不足以改变整体结构。
@@ -48,7 +48,7 @@ AF3 单体预测已完成（`structures/af3_raw/Hgal_cGAS_4mut_rev/`）。
 - LightDock 对接：**7/25 有效 poses**
 - **结论**：4 个反向突变**无法**改变裸鼹鼠 cGAS 的紧凑几何
 
-详见：`docs/af3_mutation_analysis.md`
+详见：`docs/10-reports/af3_mutation_analysis.md`
 
 ### 对假说的影响
 ❌ "突变是充分必要条件"**不成立**。紧凑几何是物种特异性整体结构的固有特征，不是 4 个突变的结果。
@@ -58,7 +58,7 @@ AF3 单体预测已完成（`structures/af3_raw/Hgal_cGAS_4mut_rev/`）。
 ## 3. 嵌合体 AF3 预测 — ✅ 已完成
 
 ### 结果
-见 `docs/af3_mutation_analysis.md` 第 7 节。
+见 `docs/10-reports/af3_mutation_analysis.md` 第 7 节。
 
 **关键发现**：嵌合体实验推翻了简单"loop 假说"。Hgal 的紧凑几何是物种特异性整体折叠的产物，不能通过移植 loop 区域重现。
 

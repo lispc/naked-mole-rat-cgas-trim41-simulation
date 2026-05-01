@@ -151,8 +151,8 @@
 
 | 阶段 | 任务 | 结果 |
 |------|------|------|
-| 结构预测 | AlphaFold3 (4 systems) | ✅ 完成，详见 `docs/af3_report.md` |
-| 分子对接 | ClusPro (4 systems) | ✅ 完成，详见 `docs/docking_report.md` |
+| 结构预测 | AlphaFold3 (4 systems) | ✅ 完成，详见 `docs/10-reports/af3_report.md` |
+| 分子对接 | ClusPro (4 systems) | ✅ 完成，详见 `docs/10-reports/docking_report.md` |
 | MD 生产 | OpenMM Hsap_WT 200ns × 3 reps | ✅ 完成 |
 | MD 生产 | OpenMM Hgal_WT 200ns × 3 reps | ✅ 完成 |
 | GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，数据不可靠，不纳入分析 |

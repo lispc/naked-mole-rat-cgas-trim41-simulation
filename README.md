@@ -48,14 +48,14 @@
 
 | Document | Content |
 |----------|---------|
-| [`docs/project_log.md`](docs/project_log.md) | **主索引**：项目概况、当前状态总览、时间线、文件速查 |
-| [`docs/docking_report.md`](docs/docking_report.md) | **蛋白对接完整记录**：ClusPro（失败）、SDOCK2.0（放弃）、LightDock（成功）；3 套体系的运行参数和结果分析 |
-| [`docs/af3_report.md`](docs/af3_report.md) | **AF3 结构预测**：4 个 job 的 ipTM/pTM 数据、突变映射表 |
-| [`docs/hardware_benchmark.md`](docs/hardware_benchmark.md) | **硬件与性能**：4×RTX 3090 基准测试、MD 速度估算（~152 ns/day @ 116k atoms） |
-| [`docs/execution_plan_v1.md`](docs/execution_plan_v1.md) | **执行方案 v1.0**：6 个阶段的详细计划、时间线 |
-| [`docs/computational_workflow.md`](docs/computational_workflow.md) | **原始方案设计**：方法学选择理由、工具对比、技术路线 |
-| [`docs/paper_notes_cgas_trim41.md`](docs/paper_notes_cgas_trim41.md) | **论文理解笔记**：Chen et al. Science 2025 的关键发现、实验因果链、突变信息 |
-| [`docs/cluspro_submission_guide.md`](docs/cluspro_submission_guide.md) | **ClusPro 提交指南**：6 个 job 的详细参数、活性残基列表 |
+| [`docs/00-project/project_log.md`](docs/00-project/project_log.md) | **主索引**：项目概况、当前状态总览、时间线、文件速查 |
+| [`docs/10-reports/docking_report.md`](docs/10-reports/docking_report.md) | **蛋白对接完整记录**：ClusPro（失败）、SDOCK2.0（放弃）、LightDock（成功）；3 套体系的运行参数和结果分析 |
+| [`docs/10-reports/af3_report.md`](docs/10-reports/af3_report.md) | **AF3 结构预测**：4 个 job 的 ipTM/pTM 数据、突变映射表 |
+| [`docs/50-infra/hardware_benchmark.md`](docs/50-infra/hardware_benchmark.md) | **硬件与性能**：4×RTX 3090 基准测试、MD 速度估算（~152 ns/day @ 116k atoms） |
+| [`docs/20-protocols/execution_plan_v1.md`](docs/20-protocols/execution_plan_v1.md) | **执行方案 v1.0**：6 个阶段的详细计划、时间线 |
+| [`docs/20-protocols/computational_workflow.md`](docs/20-protocols/computational_workflow.md) | **原始方案设计**：方法学选择理由、工具对比、技术路线 |
+| [`docs/00-project/paper_notes_cgas_trim41.md`](docs/00-project/paper_notes_cgas_trim41.md) | **论文理解笔记**：Chen et al. Science 2025 的关键发现、实验因果链、突变信息 |
+| [`docs/10-reports/cluspro_submission_guide.md`](docs/10-reports/cluspro_submission_guide.md) | **ClusPro 提交指南**：6 个 job 的详细参数、活性残基列表 |
 
 ## Systems Simulated
 

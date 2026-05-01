@@ -343,7 +343,7 @@ lightdock3.py setup.json 200 -c 1 -s fastdfire
 - ✅ Docking 成功/失败的验证仍然成立
 - ❌ 需要修正机制论述：从"突变聚集位点"改为"物种特异性结构差异导致几何不同"
 
-详见：`docs/af3_mutation_analysis.md`
+详见：`docs/10-reports/af3_mutation_analysis.md`
 
 ---
 

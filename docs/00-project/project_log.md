@@ -10,7 +10,7 @@
 - **次要因素**: LINCS `iter=1, order=4` 精度不足；NPT vs NVT production ensemble 差异
 - **文献基准**: 跨引擎 RMSD 差异 4× 远超正常范围（文献报道通常 <2×，能量差异 0.3-1.0 kcal/mol）
 
-诊断报告: `docs/gromacs_openmm_divergence_diagnosis.md`
+诊断报告: `docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md`
 
 ### 45.2 GROMACS 修复内容
 
@@ -39,7 +39,7 @@
 
 ### 45.3 磷酸化 MD 方案
 
-方案文档: `docs/phosphorylation_md_plan.md`
+方案文档: `docs/20-protocols/phosphorylation_md_plan.md`
 
 #### 核心位点选择
 | 位点 | 全长编号 | 构建体范围 | 优先级 | 依据 |
