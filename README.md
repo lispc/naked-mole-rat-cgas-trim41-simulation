@@ -1,142 +1,168 @@
 # cGAS-TRIM41 Molecular Dynamics Study
 
-> Computational investigation of how 4 amino acid variants in naked mole-rat cGAS affect TRIM41-mediated ubiquitination.
-> 
+> Computational investigation of how four amino acid variants in naked mole-rat (*Heterocephalus glaber*) cGAS affect TRIM41-mediated ubiquitination.
+>
 > Based on: *A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging* (Chen et al., Science 2025)
 
 ## Project Structure
 
 ```
-├── sequences/          # FASTA files for structure prediction
+├── AGENTS.md              # AI agent instructions
+├── GEMINI.md              # Symlink to AGENTS.md
+├── README.md              # This file
+├── main.pdf               # Project manuscript
+│
+├── sequences/             # FASTA files for structure prediction
 │   ├── Hsap_cGAS_WT.fasta
 │   ├── Hsap_cGAS_4mut.fasta
 │   ├── Hgal_cGAS_WT.fasta
 │   ├── Hgal_cGAS_4mut_rev.fasta
 │   └── TRIM41_WT.fasta
-├── structures/         # Predicted structures and docking results
-│   ├── af3_raw/        # Raw AF3 outputs (4 jobs)
-│   └── docking/        # Protein-protein docking results
-│       ├── cluspro/    # ClusPro web server results
-│       ├── sdock2/     # SDOCK2.0 attempt (abandoned)
-│       └── lightdock/  # LightDock results (successful)
-├── scripts/            # Analysis and simulation scripts
-│   ├── process_af3_results.py      # Automated AF3 result processing
-│   ├── analyze_lightdock.py        # LightDock pose analysis
-│   ├── build_system.py             # MD system preparation
-│   ├── run_md.py                   # Production MD with OpenMM
-│   ├── analyze_system.py           # Generic single-system MD analysis (NEW)
-│   ├── compare_systems.py          # Cross-system comparison (NEW)
-│   ├── generate_mock_trajectory.py # Mock trajectory generator (NEW)
-│   ├── analyze_trajectory.py       # Legacy trajectory analysis
-│   └── run_mmpbsa.py               # MM-GBSA binding energy
+│
+├── structures/            # Predicted structures and docking results
+│   ├── af3_raw/           # Raw AlphaFold3 outputs
+│   └── docking/           # Protein-protein docking results
+│
+├── scripts/               # Analysis and simulation scripts
+│   ├── README.md          # Full script index
+│   └── AGENTS.md          # Script-specific conventions
+│
 ├── data/
-│   ├── md_runs/        # MD system files and trajectories
-│   │   ├── Hgal_domain/rep{1,2,3}/  # Hgal WT 3×200ns (COMPLETED)
-│   │   ├── Hsap_WT/rep1/            # Hsap WT 1×200ns (RUNNING)
-│   │   ├── Hsap_4mut/rep1/          # Hsap 4mut 1×200ns (RUNNING)
-│   │   └── Hgal_4mut_rev/rep1/      # Hgal 4mut_rev 1×200ns (RUNNING)
-│   ├── analysis/       # Analysis outputs
-│   │   ├── final_200ns/             # Hgal WT final analysis
-│   │   └── mock_run/                # Pipeline dry-run outputs
-│   └── rosetta/        # Rosetta mutation scanning
-├── tools/              # Third-party tools
-│   └── SDOCK2.0/       # Git clone (compiled but unused)
-└── docs/               # Documentation
+│   ├── md_runs/           # OpenMM MD trajectories
+│   │   ├── Hsap_WT/
+│   │   ├── Hsap_4mut/
+│   │   ├── Hgal_WT/
+│   │   ├── Hgal_4mut_rev/
+│   │   └── Hsap_WT_S305phos/
+│   ├── md_runs_gmx/       # GROMACS MD trajectories (legacy conversion)
+│   ├── md_runs_gmx2026/   # GROMACS 2026 native force field validation
+│   └── analysis/          # Analysis outputs (JSON, PNG, NPZ)
+│
+├── figures/               # Publication-ready figures
+│
+└── docs/                  # Documentation (see index below)
+    ├── README.md
+    ├── 00-project/        # Project logs and meta-information
+    ├── 10-reports/        # Completed experimental reports
+    ├── 20-protocols/      # Protocols and execution plans
+    ├── 30-diagnostics/    # Troubleshooting and divergence diagnosis
+    ├── 40-reviews/        # External peer review feedback
+    └── 50-infra/          # Hardware, software, environment
 ```
 
 ## Documentation Index
 
 | Document | Content |
 |----------|---------|
-| [`docs/00-project/project_log.md`](docs/00-project/project_log.md) | **主索引**：项目概况、当前状态总览、时间线、文件速查 |
-| [`docs/10-reports/docking_report.md`](docs/10-reports/docking_report.md) | **蛋白对接完整记录**：ClusPro（失败）、SDOCK2.0（放弃）、LightDock（成功）；3 套体系的运行参数和结果分析 |
-| [`docs/10-reports/af3_report.md`](docs/10-reports/af3_report.md) | **AF3 结构预测**：4 个 job 的 ipTM/pTM 数据、突变映射表 |
-| [`docs/50-infra/hardware_benchmark.md`](docs/50-infra/hardware_benchmark.md) | **硬件与性能**：4×RTX 3090 基准测试、MD 速度估算（~152 ns/day @ 116k atoms） |
-| [`docs/20-protocols/execution_plan_v1.md`](docs/20-protocols/execution_plan_v1.md) | **执行方案 v1.0**：6 个阶段的详细计划、时间线 |
-| [`docs/20-protocols/computational_workflow.md`](docs/20-protocols/computational_workflow.md) | **原始方案设计**：方法学选择理由、工具对比、技术路线 |
-| [`docs/00-project/paper_notes_cgas_trim41.md`](docs/00-project/paper_notes_cgas_trim41.md) | **论文理解笔记**：Chen et al. Science 2025 的关键发现、实验因果链、突变信息 |
-| [`docs/10-reports/cluspro_submission_guide.md`](docs/10-reports/cluspro_submission_guide.md) | **ClusPro 提交指南**：6 个 job 的详细参数、活性残基列表 |
+| [`docs/00-project/project_log.md`](docs/00-project/project_log.md) | **Primary log**: Current status, timeline, and decisions |
+| [`docs/10-reports/docking_report.md`](docs/10-reports/docking_report.md) | Protein-protein docking: ClusPro, SDOCK2.0, LightDock, Rosetta |
+| [`docs/10-reports/af3_report.md`](docs/10-reports/af3_report.md) | AlphaFold3 structure prediction: ipTM/pTM, mutation mapping |
+| [`docs/10-reports/interface_analysis_report.md`](docs/10-reports/interface_analysis_report.md) | Interface analysis and allosteric mechanism evidence |
+| [`docs/20-protocols/phosphorylation_md_plan.md`](docs/20-protocols/phosphorylation_md_plan.md) | Phosphorylation MD protocol and running records |
+| [`docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md`](docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md) | GROMACS vs OpenMM divergence: CMAP fix, PBC pitfalls |
+| [`docs/50-infra/hardware_benchmark.md`](docs/50-infra/hardware_benchmark.md) | Hardware benchmarks and MD performance (~152 ns/day) |
+| [`docs/50-infra/software_versions.md`](docs/50-infra/software_versions.md) | Software version lockfile |
 
-## Systems Simulated
+See [`docs/README.md`](docs/README.md) for the full index.
 
-| System | cGAS | TRIM41 | Mutations | Status |
-|--------|------|--------|-----------|--------|
-| Hgal_WT | NMR WT | WT | — | ✅ 3×200ns 完成 + 分析 |
-| Hsap_WT | Human WT | WT | — | ✅ 1×200ns 完成 + 分析 |
-| Hsap_4mut | Human → NMR | WT | C463S, K479E, L495Y, K498T | ✅ 1×200ns 完成 + 分析 |
-| Hgal_4mut_rev | NMR → Human | WT | S463C, E511K, Y527L, T530K | 🔄 2×200ns ~150ns 运行中 |
+## Simulated Systems
 
-*NMR = naked mole-rat (Heterocephalus glaber). Paper numbering uses NMR coordinates.*
+All systems use the cGAS C-terminal domain construct (residues 200-554, 355 aa) in complex with TRIM41 SPRY, prepared with ff19SB + OPC water model.
+
+| System | cGAS | TRIM41 | Mutations | Replicas | Status |
+|--------|------|--------|-----------|----------|--------|
+| **Hsap_WT** | Human WT | WT | — | 3 | Completed (3 × 200 ns) |
+| **Hsap_4mut** | Human | WT | D431S, K479E, L495Y, K498T | 3 | Completed (3 × 200 ns) |
+| **Hgal_WT** | NMR WT | WT | — | 3 | Completed (3 × 200 ns) |
+| **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 2 | Completed (2 × 200 ns) |
+| **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | In progress (~138 ns / 200 ns) |
+
+*NMR = naked mole-rat (*Heterocephalus glaber*). Paper numbering uses NMR coordinates (554 aa); human corresponds to 522 aa.*
+
+**Cross-engine validation:**
+- GROMACS 2026 native `amber19sb.ff` + OPC: Hsap_WT rep1, ~77 ns / 200 ns (ongoing). CMAP fix validated: COM/Rg match OpenMM within 1%, RMSD ratio 1.34×.
 
 ## Key Findings
 
-### Finding 1: Mutations are NOT at the physical interface
+### 1. Mutations are NOT at the physical interface
 
-**MD evidence** (Hgal WT 3×200ns):
+The four mutation sites (residues 463, 511, 527, 530 in NMR numbering) are **>200 residues away** in sequence from the interface region (residues 228-266) and **30-39 Å away** in 3D space. They cannot directly contact TRIM41.
 
-| Mutation site | PDB resid | Distance to nearest interface residue | Distance to TRIM41 |
-|--------------|-----------|--------------------------------------|-------------------|
-| S463 | 482 | **32 residues** | ~29 Å |
-| E511 | 530 | **80 residues** | ~31 Å |
-| Y527 | 546 | **96 residues** | ~31 Å |
-| T530 | 549 | **99 residues** | ~39 Å |
+| Mutation | NMR Resid | Distance to nearest interface residue | Distance to TRIM41 |
+|----------|-----------|--------------------------------------|-------------------|
+| S463 | 482 | 32 residues | ~29 Å |
+| E511 | 530 | 80 residues | ~31 Å |
+| Y527 | 546 | 96 residues | ~31 Å |
+| T530 | 549 | 99 residues | ~39 Å |
 
-The 4 mutation sites (resid 482–549) are **>200 residues away** in sequence from the interface region (resid 228–266) and **30–39 Å away in space**. They cannot directly contact TRIM41.
+### 2. Interface is at the cGAS N-terminus
 
-### Finding 2: Interface is at the cGAS N-terminus
-
-Physical interface involves cGAS resid **228–266** ↔ TRIM41 82–190:
+The physical binding interface involves cGAS residues **228-266** and TRIM41 residues **82-190**:
 - TRIM41-157/158 ↔ cGAS-258/259 (occupancy >60%, most stable)
 - TRIM41-187 ↔ cGAS-236 (occupancy ~39%)
 
-The C-terminal mutation sites are spatially separated from the interface by the entire cGAS domain.
-
-### Finding 3: Hsap systems are much more dynamic than Hgal
+### 3. Human systems are more dynamic than naked mole-rat
 
 | Metric | Hgal_WT | Hsap_WT | Hsap_4mut |
 |--------|---------|---------|-----------|
 | RMSD | 5.16 ± 0.72 Å | **8.94 ± 1.58 Å** | **9.76 ± 2.21 Å** |
 | COM | 37.4 ± 0.9 Å | **46.6 ± 2.4 Å** | **49.0 ± 2.8 Å** |
 
-Hsap 4mut makes the complex **even less stable** (RMSD +9%, COM +5%, p < 1e-30).
+The 4mut makes the human complex **even less stable** (RMSD +9%, COM +5%, p < 1e-30).
 
-### Finding 4: Active site distances diverge between species
+### 4. Active site geometry diverges between species
 
 | Site | Hgal_WT | Hgal_4mut_rev | Hsap_WT | Hsap_4mut |
 |------|---------|---------------|---------|-----------|
 | S463/D431 | 29.4 Å | **18.6 Å** (−10.8) | 29.4 Å | 32.0 Å (+2.6) |
 | E511/K479 | 31.5 Å | **21.9 Å** (−9.7) | 36.6 Å | 40.0 Å (+3.4) |
 
-**Hgal 4mut_rev** brings active sites **closer** to TRIM41; **Hsap 4mut** pushes them **farther**.
+**Hgal_4mut_rev** brings active sites **closer** to TRIM41; **Hsap_4mut** pushes them **farther**.
 
-### Finding 5: Lys-334 is the top ubiquitination candidate in Hsap
+### 5. Lys-334 is the top ubiquitination candidate in human cGAS
 
-Lysine accessibility analysis reveals **Lys-334** (homologous to Hgal position near the active site cluster) as the closest cGAS Lys to TRIM41 RING:
-- Hsap WT: 10.4 Å | Hsap 4mut: **6.4 Å** (−4.0 Å)
-- 4mut may **concentrate** ubiquitination to this single site.
+Lysine accessibility analysis reveals **Lys-334** as the closest cGAS lysine to the TRIM41 RING domain:
+- Hsap WT: 10.4 Å
+- Hsap 4mut: **6.4 Å** (−4.0 Å)
+
+The 4mut may **concentrate** ubiquitination to this single site.
+
+### 6. S305 phosphorylation causes complex dissociation (unexpected)
+
+Preliminary analysis of S305-phos (~138 ns) shows **dissociation** in all three replicas:
+
+| System | COM (Å) | Rg (Å) | Behavior |
+|--------|---------|--------|----------|
+| WT (reference) | 45.1 ± 3.2 | 31.1 ± 1.3 | Stable bound |
+| S305-phos rep1 | **67.6 ± 1.4** | 38.9 ± 0.6 | Dissociating |
+| S305-phos rep2 | **89.8 ± 10.0** | 48.4 ± 4.3 | Fully dissociated |
+| S305-phos rep3 | **71.3 ± 3.4** | 40.2 ± 1.4 | Dissociating |
+
+This contradicts Zhen et al. (2023), who reported that CHK2 phosphorylation at S305 **promotes** cGAS-TRIM41 binding. Possible explanations: (1) force field overestimation of −2 charge repulsion in solution, (2) nuclear/DNA environment required for stabilization, (3) dissociation is an intermediate state prior to DNA-mediated recruitment.
 
 ### Allosteric mechanism hypothesis
 
-Since mutations are far from the interface, their effect must be **allosteric**:
-- C-terminal 4mut → altered global dynamics → changed RING-to-Lys geometry → differential ubiquitination
+Since the mutations are far from the interface, their effect must be **allosteric**:
 
-**In progress**: Umbrella Sampling of RING→Lys-334 distance (2 windows running on GPU 0/1).
+```
+C-terminal 4mut  →  altered global dynamics  →  changed RING-to-Lys geometry  →  differential ubiquitination
+```
 
 ## Quick Start
 
 ### Environment Setup
 
 ```bash
-# Conda base
-export CONDA_PATH="$HOME/miniforge3"
-source $CONDA_PATH/etc/profile.d/conda.sh
-
-# MD environment (OpenMM, AmberTools, analysis)
+# Activate the MD environment
 conda activate cgas-md
-python --version  # Python 3.11.15
+python --version  # Python 3.11
+
+# For GROMACS
+conda activate gmx
+gmx --version  # GROMACS 2026.0
 ```
 
-### Build MD System
+### Build an MD System
 
 ```bash
 conda activate cgas-md
@@ -152,21 +178,25 @@ conda activate cgas-md
 CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
     --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
     --pdb data/md_runs/Hsap_WT/Hsap_WT_minimized.pdb \
-    --name Hsap_WT_rep1 --outdir data/md_runs/Hsap_WT/rep1 \
-    --prod-ns 200 --platform CUDA
+    --name Hsap_WT_rep1 \
+    --outdir data/md_runs/Hsap_WT/rep1 \
+    --prod-ns 200 \
+    --platform CUDA
 ```
 
-### Analyze Single System
+**Multi-GPU replicas:** Use `CUDA_VISIBLE_DEVICES` to isolate GPUs. The script hardcodes `CudaDeviceIndex='0'`.
+
+### Analyze a Single System
 
 ```bash
 conda activate cgas-md
 python scripts/analyze_system.py \
-    --system Hgal_WT \
-    --prmtop data/md_runs/Hgal_domain/Hgal_domain.prmtop \
-    --trajectories data/md_runs/Hgal_domain/rep1/*.dcd \
+    --system Hsap_WT \
+    --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
+    --trajectories data/md_runs/Hsap_WT/rep1/*.dcd \
     --replica-names rep1 \
     --cgas-range 219 573 \
-    --active-sites '{"S463": 482, "E511": 530, "Y527": 546, "T530": 549}' \
+    --active-sites '{"D431": 450, "K479": 498, "L495": 514, "K498": 517}' \
     --dt-ns 0.1 \
     --outdir data/analysis/my_run
 ```
@@ -176,70 +206,33 @@ python scripts/analyze_system.py \
 ```bash
 conda activate cgas-md
 python scripts/compare_systems.py \
-    --a data/analysis/run_A/Hgal_WT_summary.json \
-    --b data/analysis/run_B/Hgal_4mut_rev_summary.json \
-    --name-a Hgal_WT --name-b Hgal_4mut_rev \
+    --a data/analysis/run_A/Hsap_WT_summary.json \
+    --b data/analysis/run_B/Hsap_4mut_summary.json \
+    --name-a Hsap_WT --name-b Hsap_4mut \
     --outdir data/analysis/comparison
 ```
 
-### Generate Mock Trajectory
-
-```bash
-conda activate cgas-md
-python scripts/generate_mock_trajectory.py \
-    --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
-    --coord data/md_runs/Hsap_WT/Hsap_WT_minimized.pdb \
-    --out-dcd data/md_runs/Hsap_WT/mock/mock_prod.dcd \
-    --out-log data/md_runs/Hsap_WT/mock/mock_prod.log \
-    --duration-ps 10
-```
-
-## Analysis Pipeline
-
-```
-MD trajectories → analyze_system.py → per-system JSON + PNG plots
-                                    ↓
-                         compare_systems.py → cross-system comparison
-                                              (Welch t-test, ΔRMSF,
-                                               contact differences)
-```
-
-**Metrics computed**:
-- RMSD time series (per replica)
-- RMSF per residue (cross-replica overlay)
-- Interface contact occupancy (heatmap + top list)
-- COM distance time series
-- Active site distances (optional)
-
-## Environment Details
+## Environment
 
 ### Conda Environments
 
-#### `cgas-md` — MD Simulation & Analysis
+| Environment | Purpose | Key Packages |
+|-------------|---------|--------------|
+| `cgas-md` | OpenMM MD, AmberTools, analysis | OpenMM 8.5.1, AmberTools 24.8, MDAnalysis 2.10.0, NumPy 2.4.3, SciPy 1.17.1, Matplotlib 3.10.8 |
+| `gmx` | GROMACS 2026.0 CUDA | GROMACS 2026.0 (nompi_cuda) |
+| `rosetta` | PyRosetta docking | PyRosetta 2025.06 |
 
-| Package | Version |
-|---------|---------|
-| Python | 3.11.15 |
-| OpenMM | 8.5.1 (conda-forge, CUDA build) |
-| AmberTools | 24.8 |
-| MDAnalysis | 2.10.0 |
-| SciPy | 1.17.1 |
-| Matplotlib | 3.10.8 |
-| NumPy | 2.4.3 |
+**Always use conda environments. Do not use the system Python.**
 
-Path: `~/miniforge3/envs/cgas-md/bin/python`
-
-## Hardware
+### Hardware
 
 | Component | Specification |
 |-----------|--------------|
-| CPU | x86_64 server CPU |
-| GPU | 4× NVIDIA GeForce RTX 3090 (24GB VRAM each) |
-| Memory | Server RAM (充足) |
-| OS | Linux (CUDA 13.0) |
-| Backend | CUDA (mixed precision) |
-| Performance | ~152 ns/day @ 116k atoms (domain-truncated, measured) |
+| CPU | AMD EPYC 7702, 64 cores |
+| GPU | 4× NVIDIA RTX 3090 (24 GB VRAM each) |
+| OS | Linux x86_64, CUDA 13.0 |
+| Performance | ~152 ns/day @ 116k atoms (OpenMM, domain-truncated) |
 
 ## Citation
 
-Chen et al. (2025). *A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging*. Science.
+Chen et al. (2025). *A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging*. **Science**.
