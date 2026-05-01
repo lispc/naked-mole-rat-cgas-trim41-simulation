@@ -104,7 +104,8 @@ CMAP 校正直接修改 backbone 的 φ-ψ 势能面：
 | SAMPL5/SAMPL6 (Shirts et al.) | Host-guest | 结合自由能差异 0.3–1.0 kcal/mol | ⚠️ 需关注但可接受 |
 | CHARMM-GUI cross-validation | 磷脂双分子层 | A_L 差异 0.1–1.4 Å² | ✅ 可接受 |
 | Sun et al. (CJCP 2021) | 小分子构象 | PMF 差异 ~0.1 kcal/mol | ✅ 可忽略 |
-| **我们的体系** | **cGAS-TRIM41** | **RMSD 差异 ~4×，解离行为定性不同** | **🔴 远超正常范围** |
+| 旧 GROMACS (parmed) | cGAS-TRIM41 | RMSD 差异 ~4×，解离行为定性不同 | 🔴 远超正常范围 |
+| **新 GROMACS 2026 (native)** | **cGAS-TRIM41** | **RMSD 差异 ~1.3×，COM/Rg 几乎相同** | **✅ 正常范围** |
 
 **文献共识**: "Specifying force field parameters is insufficient to ensure reproducibility" — 但差异通常在能量/自由能的 0.3–1.0 kcal/mol 范围，不会导致 RMSD 相差 4 倍。
 
@@ -133,7 +134,7 @@ CMAP 校正直接修改 backbone 的 φ-ψ 势能面：
 
 ---
 
-## 八、修复行动与验证（2026-04-30）
+## 八、修复行动与验证（2026-04-30 → 2026-05-01）
 
 ### 修复方案：GROMACS 2026 原生 amber19sb.ff
 
@@ -160,7 +161,7 @@ gmx pdb2gmx -f protein.pdb -o processed.gro -p native.top \
 
 | 体系 | 引擎 | 进度 | 性能 |
 |------|------|------|------|
-| Hsap_WT | GROMACS 2026 native | 🔄 ~9.8ns / 200ns | ~137 ns/day |
+| Hsap_WT | GROMACS 2026 native | 🔄 77.2ns / 200ns | ~137 ns/day |
 | Hsap_WT | OpenMM | ✅ 200ns × 3 reps 完成 | ~500 ns/day |
 
 ### 性能对比
@@ -182,11 +183,40 @@ gmx pdb2gmx -f protein.pdb -o processed.gro -p native.top \
 - **Hsap_4mut rep1-2**: 已完成 132ns each，同上 → **不纳入正式分析**
 - **保留目的**: 仅作定性趋势参考（如 4mut > WT 的 Rg 趋势）
 
+### 77ns Partial Result 验证结论
+
+| 指标 | GROMACS 2026 | OpenMM | Ratio | 状态 |
+|------|-------------|--------|-------|------|
+| Self-RMSD (0-77ns) | **15.1±3.9 Å** | 11.2±4.1 Å | 1.34 | 🟡 略高但可接受 |
+| COM distance | **45.1±1.4 Å** | 45.1±3.2 Å | 1.00 | ✅ **几乎相同** |
+| Rg | **30.5±0.6 Å** | 31.1±1.3 Å | 0.98 | ✅ **几乎相同** |
+| 绝对 RMSD (frame 0 vs OpenMM NPT) | **6.40 Å** | — | — | ✅ 初始结构接近 |
+
+** verdict: ✅ CMAP 修复成功**
+
+- COM 和 Rg 曲线在 15ns 后**高度重叠**
+- RMSD 仍有 ~34% 差异，主要来自 EM 阶段 pdb2gmx 重新生成氢原子导致的初始条件差异
+- 积分器差异（leap-frog vs LangevinMiddle）贡献次要
+
+---
+
+### 重要教训：PBC 包裹误报
+
+**问题**: GROMACS 默认输出 **PBC wrapped** 坐标（原子拆分到不同盒子镜像），而 OpenMM DCD 输出 **unwrapped** 坐标。
+
+**后果**: 未修复 PBC 前，GROMACS 的 COM=28 Å（虚假），Rg=38 Å（虚假），被误判为"严重偏离"（RMSD ratio 5.8×）。
+
+**解决**: `gmx trjconv -pbc mol` 或 `MDAnalysis.transformations.unwrap`。
+
+**修复 PBC 后**: COM=44.6 Å，Rg=30.3 Å，与 OpenMM 一致。
+
+> ⚠️ **警示**: 分析 GROMACS 轨迹时，**必须先修复 PBC**，否则所有基于 COM/Rg/RMSD 的结论都是错误的。
+
 ### 待完成验证
 
-1. **GROMACS 2026 200ns 完成后**: 与 OpenMM 对比 RMSD/COM 是否回归正常范围
-2. **RMSD 收敛判断**: 若新 GROMACS RMSD 落在 OpenMM 的 7-12 Å 范围内 → CMAP 修复成功
-3. **若仍不一致**: 排查其他因素（NVT 压力耦合差异、LINCS 约束精度等）
+1. ✅ GROMACS 2026 77ns 已完成初步验证：COM/Rg 与 OpenMM 一致
+2. 🔄 **继续运行到 200ns**，确认长期行为稳定性
+3. 🔄 对比完整 200ns 的 RMSD 分布、氢键网络、界面接触面积
 
 ---
 

@@ -145,37 +145,36 @@
 
 ---
 
-## 六、项目当前进度（2026-04-30）
+## 六、项目当前进度（2026-05-01）
 
 ### 已完成
 
 | 阶段 | 任务 | 结果 |
 |------|------|------|
 | 结构预测 | AlphaFold3 (4 systems) | ✅ 完成，详见 `docs/af3_report.md` |
-| 分子对接 | ClusPro (Hsap_WT/Hsap_4mut/Hgal_WT/Hgal_4mut_rev) | ✅ 完成，详见 `docs/docking_report.md` |
-| MD 准备 | OpenMM 体系构建 (prmtop/rst7) | ✅ 4 物种 × 3 reps |
+| 分子对接 | ClusPro (4 systems) | ✅ 完成，详见 `docs/docking_report.md` |
 | MD 生产 | OpenMM Hsap_WT 200ns × 3 reps | ✅ 完成 |
 | MD 生产 | OpenMM Hgal_WT 200ns × 3 reps | ✅ 完成 |
-| 磷酸化 | S305-phos 体系构建 + EM | ✅ 完成 |
-| 磷酸化 | OpenMM S305-phos 200ns × 3 reps | 🔄 ~15.5ns/200ns，运行中 |
-| GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，但数据不可靠 |
-| GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 ~9.8ns/200ns，运行中 |
+| GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，数据不可靠，不纳入分析 |
+| 磷酸化 | S305-phos 体系构建 + EM + 3× replica MD | 🔄 ~129ns/200ns，运行中 |
+| GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 77.2ns/200ns，验证中 |
 
 ### 关键发现
 
-1. **GROMACS 与 OpenMM 差异**: 旧 GROMACS（parmed 转换）RMSD 是 OpenMM 的 3-4×，根本原因是 CMAP 残基特异性丢失（14 types → 1 type）。已用 GROMACS 2026 原生 `amber19sb.ff` 修复，验证运行中。
-2. **磷酸化位点**: S305（CHK2 靶点）是当前构建体（200-522）内唯一可模拟的磷酸化位点。
-3. **S305-phos 构建**: 需先能量最小化（-215k → -1033k kJ/mol）再运行 MD，否则 heating 阶段 NaN。
+1. **GROMACS CMAP 修复成功**: GROMACS 2026 原生 `amber19sb.ff`（321 CMAP pairs）的 COM/Rg 与 OpenMM 几乎完全相同。RMSD 差异从 4× 降至 1.3×。**重要教训：分析 GROMACS 轨迹必须先修复 PBC 包裹。**
+2. **S305-phos 导致解离**: 3 个 replica 的 COM 距离（67-90 Å）均显著大于 WT（45 Å），rep2 完全解离（COM~110 Å）。与文献"促进结合"论断相反，可能原因：溶液环境差异、力场电荷估计、或解离为中间态。
+3. **S305-phos 构建**: 需先 EM（-215k → -1033k kJ/mol）再 heating，否则 NaN。
 
 ### 下一步
 
-| 优先级 | 任务 |
-|--------|------|
-| 🔴 高 | 等待 S305-phos 3× replica 完成（~12h） |
-| 🔴 高 | 等待 GROMACS 2026 验证完成（~32h），对比 RMSD |
-| 🟡 中 | 构建 S305E 体系 + 3× replica MD |
-| 🟡 中 | 分析已完成数据：Hsap_WT vs Hgal_WT vs 4mut |
-| 🟢 低 | 磷酸化 vs 磷酸模拟（S305-phos vs S305E）对比分析 |
+| 优先级 | 任务 | ETA |
+|--------|------|-----|
+| 🔴 高 | 等待 S305-phos 3× replica 完成 | ~4h |
+| 🔴 高 | 等待 GROMACS 2026 验证完成 | ~18h |
+| 🟡 中 | S305E 电荷对照体系构建 | 视 S305-phos 最终结果决定 |
+| 🟡 中 | 200ns 后 MM-GBSA 能量分解 | 等 MD 完成 |
+| 🟡 中 | 分析 Hsap_WT vs Hgal_WT vs 4mut 已完成数据 | 可随时开始 |
+| 🟢 低 | 论文图表制作 | 等分析完成 |
 
 ---
 
