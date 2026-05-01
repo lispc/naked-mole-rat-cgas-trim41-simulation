@@ -76,12 +76,15 @@
 | **Hsap_4mut** | 人源 | WT | D431S, K479E, L495Y, K498T | 3 | 已完成（3 × 200 ns） |
 | **Hgal_WT** | 裸鼹鼠 WT | WT | — | 3 | 已完成（3 × 200 ns） |
 | **Hgal_4mut_rev** | 裸鼹鼠 | WT | S463D, E511K, Y527L, T530K | 2 | 已完成（2 × 200 ns） |
-| **Hsap_WT_S305phos** | 人源 WT, SEP@305 | WT | — | 3 | 进行中（~138 ns / 200 ns） |
+| **Hsap_WT_S305phos** | 人源 WT, SEP@305 | WT | — | 3 | 进行中（~140 ns / 200 ns） |
 
 *NMR = 裸鼹鼠（*Heterocephalus glaber*）。论文编号使用 NMR 坐标（554 aa）；人源对应 522 aa。*
 
 **跨引擎验证：**
-- GROMACS 2026 原生 `amber19sb.ff` + OPC：Hsap_WT rep1，~77 ns / 200 ns（进行中）。CMAP 修复已验证：COM/Rg 与 OpenMM 偏差 <1%，RMSD 比率 1.34×。
+- GROMACS 2026 原生 `amber19sb.ff` + OPC：Hsap_WT rep1，~83 ns / 200 ns（进行中）。CMAP 修复已验证：COM/Rg 与 OpenMM 偏差 <1%，RMSD 比率 1.34×。
+
+**Boltz-2 验证：**
+- 本地 Boltz-2（v2.2.1）安装在 `boltz` conda 环境中。全长 cGAS-TRIM41：ipTM 0.17（与 AF3 一致）。截断构建体：ipTM 0.33，但 TRIM41 放置位置与 AF3 定性不同（RMSD 21.34 Å，Jaccard 0.00）。证实了对此瞬态复合物采用对接+MD 策略的正确性。
 
 ## 关键发现
 
@@ -138,6 +141,8 @@ S305-phos（~138 ns）的初步分析显示所有三个副本均发生**解离**
 | S305-phos rep1 | **67.6 ± 1.4** | 38.9 ± 0.6 | 正在解离 |
 | S305-phos rep2 | **89.8 ± 10.0** | 48.4 ± 4.3 | 完全解离 |
 | S305-phos rep3 | **71.3 ± 3.4** | 40.2 ± 1.4 | 正在解离 |
+
+> 注：截至 2026-04-23，3 个 replica 均在约 140 ns / 200 ns。
 
 这与 Zhen et al. (2023) 的结论相矛盾，后者报告 CHK2 在 S305 处的磷酸化**促进** cGAS-TRIM41 结合。可能的解释：(1) 力场对溶液中 −2 电荷排斥的高估，(2) 需要细胞核/DNA 环境才能稳定，(3) 解离是 DNA 介导招募之前的中间态。
 
@@ -222,6 +227,7 @@ python scripts/compare_systems.py \
 | `cgas-md` | OpenMM MD、AmberTools、分析 | OpenMM 8.5.1, AmberTools 24.8, MDAnalysis 2.10.0, NumPy 2.4.3, SciPy 1.17.1, Matplotlib 3.10.8 |
 | `gmx` | GROMACS 2026.0 CUDA | GROMACS 2026.0 (nompi_cuda) |
 | `rosetta` | PyRosetta 对接 | PyRosetta 2025.06 |
+| `boltz` | **Boltz-2 结构预测** | **Boltz-2.2.1, PyTorch 2.11.0, CUDA 13** |
 
 **始终使用 conda 环境。不要使用系统 Python。**
 

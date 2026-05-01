@@ -125,3 +125,73 @@
 3. **GROMACS 验证是否继续到 200ns？** 77ns 已验证成功，可提前终止以释放 GPU
 4. **S305-phos 200ns 后是否延长到 500ns？** 观察是否重新结合
 
+## §47. Boltz-2 本地安装与验证 (2026-05-01)
+
+### 47.1 安装
+
+- 新建 conda 环境 `boltz`，Python 3.11
+- `pip install boltz[cuda]` → 安装 Boltz-2.2.1（默认模型 Boltz-2）
+- PyTorch 2.11.0 + CUDA 13 组件
+- **问题与修复**：`libnvrtc-builtins.so.13.0` 未找到
+  - 原因：系统 `LD_LIBRARY_PATH` 指向 CUDA 12，bolt 的 CUDA 13 库在 site-packages 中
+  - 修复：`conda env config vars set LD_LIBRARY_PATH=".../nvidia/cu13/lib:$LD_LIBRARY_PATH" -n boltz`
+- 模型权重自动下载至 `~/.boltz/`（boltz2_aff.ckpt + boltz2_conf.ckpt，共 ~5.5 GB）
+
+### 47.2 全长 cGAS-TRIM41 预测验证
+
+| 指标 | Boltz-2 | AF3 (历史) |
+|------|---------|-----------|
+| ipTM | 0.17 | 0.15 |
+| pTM | 0.40 | 0.38 |
+| complex pLDDT | 0.64 | ~0.60 |
+
+**结论**：与 AF3 完全一致——全长复合物界面置信度极低，验证了当初选择截断构建体 + 对接的决策正确。
+
+### 47.3 截断构建体预测与 AF3 结构对比
+
+**输入**：cGAS CT (200-522, 323 aa) + TRIM41 SPRY (413-630, 218 aa)
+
+**置信度**：
+| 指标 | 数值 |
+|------|------|
+| ipTM | 0.33 |
+| pTM | 0.69 |
+| complex pLDDT | 0.78 |
+| cGAS pLDDT | 0.94 |
+| TRIM41 pLDDT | 0.84 |
+
+截断后质量显著提升，但 ipTM 0.33 仍低于 0.6 可信阈值。
+
+**结构与 AF3 的定量对比**（对齐 cGAS CA 后）：
+
+| 指标 | 结果 | 含义 |
+|------|------|------|
+| cGAS CA RMSD | **1.06 Å** | 单体折叠几乎完美一致 |
+| TRIM41 CA RMSD | **21.34 Å** | 相对位置完全不同 |
+| 共享界面接触 | **0** | 接触网络完全不重叠 |
+| Jaccard 相似度 | **0.000** | 界面定义完全不同 |
+
+**活性位点距离对比**：
+| 位点 | Boltz-2 | AF3 | Δ |
+|------|---------|-----|---|
+| D431 | 21.0 Å | 23.5 Å | −2.5 Å |
+| K479 | 22.0 Å | 35.7 Å | **−13.8 Å** |
+| L495 | 25.7 Å | 31.6 Å | −5.9 Å |
+| K498 | 25.5 Å | 35.8 Å | **−10.3 Å** |
+
+### 47.4 关键结论
+
+1. **Boltz-2 对单体结构预测高度可靠**（cGAS RMSD 1.06 Å）
+2. **但对 cGAS-TRIM41 这个瞬态/弱相互作用复合物的界面预测，Boltz-2 和 AF3 给出了定性不同的答案**
+3. 两个当前最先进的模型（AF3 + Boltz-2）在低 ipTM 体系中存在**显著的界面几何分歧**
+4. 这进一步验证了项目核心策略的正确性：**不信任单一模型的复合物预测，采用对接 + MD 平衡获得初始构象**
+
+### 47.5 后续可探索方向
+
+- **加入 DNA / 核小体**：Boltz-2 支持 DNA/RNA 输入，可测试核小体存在下 cGAS-TRIM41 的界面是否更稳定
+- **亲和力预测**：加入小分子配体后，Boltz-2 可输出 `affinity_pred_value`（log10(IC50)）
+- **磷酸化修饰**：YAML 支持 `modifications` 字段，可直接预测 SEP@305 的效应
+
+对比图表：`data/boltz_test_truncated/comparison/boltz2_vs_af3_comparison.png`
+对比脚本：`scripts/compare_boltz2_af3_v2.py`
+

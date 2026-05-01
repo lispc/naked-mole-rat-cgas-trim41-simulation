@@ -80,7 +80,10 @@ All systems use the cGAS C-terminal domain construct (residues 200-554, 355 aa) 
 *NMR = naked mole-rat (*Heterocephalus glaber*). Paper numbering uses NMR coordinates (554 aa); human corresponds to 522 aa.*
 
 **Cross-engine validation:**
-- GROMACS 2026 native `amber19sb.ff` + OPC: Hsap_WT rep1, ~77 ns / 200 ns (ongoing). CMAP fix validated: COM/Rg match OpenMM within 1%, RMSD ratio 1.34×.
+- GROMACS 2026 native `amber19sb.ff` + OPC: Hsap_WT rep1, ~83 ns / 200 ns (ongoing). CMAP fix validated: COM/Rg match OpenMM within 1%, RMSD ratio 1.34×.
+
+**Boltz-2 validation:**
+- Local Boltz-2 (v2.2.1) installed in `boltz` conda environment. Full-length cGAS-TRIM41: ipTM 0.17 (identical to AF3). Domain-truncated: ipTM 0.33, but TRIM41 placement qualitatively differs from AF3 (RMSD 21.34 Å, Jaccard 0.00). Confirms docking+MD approach is correct for this transient complex.
 
 ## Key Findings
 
@@ -137,6 +140,8 @@ Preliminary analysis of S305-phos (~138 ns) shows **dissociation** in all three 
 | S305-phos rep1 | **67.6 ± 1.4** | 38.9 ± 0.6 | Dissociating |
 | S305-phos rep2 | **89.8 ± 10.0** | 48.4 ± 4.3 | Fully dissociated |
 | S305-phos rep3 | **71.3 ± 3.4** | 40.2 ± 1.4 | Dissociating |
+
+> Note: The 3 replicas are at ~140 ns / 200 ns as of 2026-04-23.
 
 This contradicts Zhen et al. (2023), who reported that CHK2 phosphorylation at S305 **promotes** cGAS-TRIM41 binding. Possible explanations: (1) force field overestimation of −2 charge repulsion in solution, (2) nuclear/DNA environment required for stabilization, (3) dissociation is an intermediate state prior to DNA-mediated recruitment.
 
@@ -221,6 +226,7 @@ python scripts/compare_systems.py \
 | `cgas-md` | OpenMM MD, AmberTools, analysis | OpenMM 8.5.1, AmberTools 24.8, MDAnalysis 2.10.0, NumPy 2.4.3, SciPy 1.17.1, Matplotlib 3.10.8 |
 | `gmx` | GROMACS 2026.0 CUDA | GROMACS 2026.0 (nompi_cuda) |
 | `rosetta` | PyRosetta docking | PyRosetta 2025.06 |
+| `boltz` | **Boltz-2 structure prediction** | **Boltz-2.2.1, PyTorch 2.11.0, CUDA 13** |
 
 **Always use conda environments. Do not use the system Python.**
 

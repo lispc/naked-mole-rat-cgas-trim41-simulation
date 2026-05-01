@@ -97,25 +97,33 @@
 1. 序列分析
    └─> 4个位点是否在TRIM41已知底物识别motif附近？
 
-2. 结构预测（AF-Multimer/AF3）
-   ├─> 人cGAS + TRIM41
+2. 结构预测（AF3 + Boltz-2 交叉验证）
+   ├─> 人cGAS + TRIM41（全长 + 截断）
    ├─> 人cGAS_4mut + TRIM41
    ├─> 裸鼹鼠cGAS + TRIM41
-   └─> 裸鼹鼠cGAS_4mut_rev + TRIM41
+   ├─> 裸鼹鼠cGAS_4mut_rev + TRIM41
+   └─> ⚠️ **当 ipTM < 0.6 时，不直接信任任一模型的复合物构象**（见下方教训）
 
 3. 界面分析（不用MD）
-   ├─> 比较 ipTM / pLDDT
+   ├─> 比较 ipTM / pLDDT（AF3 vs Boltz-2）
    ├─> 界面面积、氢键数、盐桥数
-   └─> 4个位点是否直接接触TRIM41？
+   ├─> 4个位点是否直接接触TRIM41？
+   └─> ⚠️ **若 AF3 与 Boltz-2 的界面接触网络完全不同 → 预测不可靠，需对接+MD**
 
-4. 短MD弛豫（100-200 ns）
-   └─> 观察 RMSF：突变位点柔性是否增加？
-       └─> 若4mut导致界面loop更flexible → 结合可能不稳定
+4. 蛋白对接（当预测置信度低时）
+   ├─> 工具：ClusPro（remote）或 SDOCK2.0（local）
+   ├─> 输入：单体预测结构（可信部分）
+   └─> 输出：1000 个对接构象 → 聚类 → 选择 top poses
 
-5. 结合能计算（MM-PBSA/GBSA）
+5. 短MD弛豫 + 验证（100-200 ns）
+   ├─> 观察 COM distance 和 Rg：复合物是否稳定？
+   ├─> 对比不同初始构象的收敛行为
+   └─> 若4mut导致界面loop更flexible → 结合可能不稳定
+
+6. 结合能计算（MM-PBSA/GBSA）
    └─> 至少3个独立重复，统计显著性
 
-6. 对照实验
+7. 对照实验
    ├─> 阴性对照：已知无相互作用的蛋白对
    └─> 阳性对照：文献中有Kd数据的TRIM41-底物
 ```
@@ -124,20 +132,30 @@
 
 ## 四、务实替代方案
 
-若 AF-Multimer 预测的复合物置信度低（ipTM < 0.6）：
+若 AF3/Boltz-2 预测的复合物置信度低（ipTM < 0.6）：
 
-1. **只做单体 MD**：比较人 vs 裸鼹鼠 cGAS 表面构象差异，看 4 个突变是否改变了泛素化位点附近的局部结构。
-2. **分子表面分析**：预测 TRIM41 底物识别表面，比较 cGAS 表面静电势/形状互补性。
-3. **等实验结构**：建议合作方尝试冷冻电镜。
+1. **单体 MD + 对接 + 平衡 MD**（本项目的实际路径）：
+   - 使用单体预测结构（高 pLDDT 区域可信）
+   - 蛋白对接获得初始复合物构象
+   - 延长 MD（200-500 ns）观察自然收敛态
+   
+2. **模型间一致性检验**：
+   - 对比 AF3 和 Boltz-2 的界面几何
+   - 若两者单体一致但界面不同（如 cGAS-TRIM41 案例），说明界面不可信
+   - 物理合理性检查： clashes、buried surface area、氢键网络
+   
+3. **实验验证优先**：
+   - 建议合作方尝试冷冻电镜
+   - 或 Co-IP / 荧光共定位实验确认界面存在性
 
 ---
 
 ## 五、关键参数速查
 
-| 项目 | 推荐 |
-|------|------|
-| 结构预测 | ColabFold (AF-Multimer v3) / AlphaFold3 |
-| MD 力场 | Amber ff19SB + OPC / CHARMM36m |
+| 项目 | 推荐 | 备注 |
+|------|------|------|
+| 结构预测 | AlphaFold3 + Boltz-2 交叉验证 | 低 ipTM 时界面不可靠，需交叉验证 |
+| MD 力场 | Amber ff19SB + OPC / CHARMM36m | |
 | MD 时长 | ≥ 500 ns（结合能计算） |
 | 结合能方法 | MM-GBSA（快）+ MM-PBSA（交叉验证） |
 | 快速突变扫描 | FoldX / Rosetta ddG |
@@ -156,27 +174,29 @@
 | MD 生产 | OpenMM Hsap_WT 200ns × 3 reps | ✅ 完成 |
 | MD 生产 | OpenMM Hgal_WT 200ns × 3 reps | ✅ 完成 |
 | GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，数据不可靠，不纳入分析 |
-| 磷酸化 | S305-phos 体系构建 + EM + 3× replica MD | 🔄 ~129ns/200ns，运行中 |
-| GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 77.2ns/200ns，验证中 |
+| 磷酸化 | S305-phos 体系构建 + EM + 3× replica MD | 🔄 ~138ns/200ns，运行中 |
+| GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 ~83ns/200ns，运行中 |
+| Boltz-2 验证 | 全长 + 截断 + 与 AF3 结构对比 | ✅ 完成 |
 
 ### 关键发现
 
-1. **GROMACS CMAP 修复成功**: GROMACS 2026 原生 `amber19sb.ff`（321 CMAP pairs）的 COM/Rg 与 OpenMM 几乎完全相同。RMSD 差异从 4× 降至 1.3×。**重要教训：分析 GROMACS 轨迹必须先修复 PBC 包裹。**
-2. **S305-phos 导致解离**: 3 个 replica 的 COM 距离（67-90 Å）均显著大于 WT（45 Å），rep2 完全解离（COM~110 Å）。与文献"促进结合"论断相反，可能原因：溶液环境差异、力场电荷估计、或解离为中间态。
-3. **S305-phos 构建**: 需先 EM（-215k → -1033k kJ/mol）再 heating，否则 NaN。
+1. **GROMACS CMAP 修复成功**: GROMACS 2026 原生 `amber19sb.ff` 的 COM/Rg 与 OpenMM 几乎完全相同。RMSD 差异从 4× 降至 1.3×。重要教训：分析 GROMACS 轨迹必须先修复 PBC 包裹。
+2. **S305-phos 导致解离**: 3 个 replica 的 COM 距离（67-90 Å）均显著大于 WT（45 Å），rep2 完全解离（COM~110 Å）。与文献"促进结合"论断相反。可能解释：溶液环境差异、力场对 -2 电荷排斥估计过度、或解离为中间态。
+3. **Boltz-2 vs AF3 界面分歧**: 对截断 cGAS-TRIM41，AF3 和 Boltz-2 的 TRIM41 相对取向完全不同（RMSD=21.34 Å, Jaccard=0.00）。cGAS 单体一致（RMSD=1.06 Å），但界面预测不可信。进一步验证了对接+MD 策略的必要性。
 
 ### 下一步
 
 | 优先级 | 任务 | ETA |
 |--------|------|-----|
-| 🔴 高 | 等待 S305-phos 3× replica 完成 | ~4h |
-| 🔴 高 | 等待 GROMACS 2026 验证完成 | ~18h |
+| 🔴 高 | 等待 S305-phos 3× replica 完成 | ~6.6h |
+| 🔴 高 | 等待 GROMACS 2026 验证完成 | ~20h |
 | 🟡 中 | S305E 电荷对照体系构建 | 视 S305-phos 最终结果决定 |
 | 🟡 中 | 200ns 后 MM-GBSA 能量分解 | 等 MD 完成 |
 | 🟡 中 | 分析 Hsap_WT vs Hgal_WT vs 4mut 已完成数据 | 可随时开始 |
+| 🟢 低 | 全长体系（S120-phos）是否需要 | 待决策 |
 | 🟢 低 | 论文图表制作 | 等分析完成 |
 
 ---
 
 *文档创建时间：2026-04-22*
-*更新时间：2026-04-30*
+*更新时间：2026-04-23*

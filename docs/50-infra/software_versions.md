@@ -45,6 +45,22 @@
 | OpenMMTools | 0.26.0 | conda-forge | 测试体系 | verify_openmm.py 依赖 |
 | CUDA Driver | 580.95.05 | NVIDIA | GPU 驱动 | |
 | CUDA Runtime | 12.9 | conda-forge | CUDA 库 | |
+| **Boltz-2** | **2.2.1** | **pip (MIT)** | **结构预测** | **本地 AF3-level，支持蛋白/DNA/小分子/亲和力预测** |
+| PyTorch | 2.11.0 | pip (CUDA 13) | Boltz-2 后端 | |
+
+**Boltz-2 环境配置：**
+- 独立 conda 环境：`boltz`
+- CUDA 13 库路径：`/home/scroll/miniforge3/envs/boltz/lib/python3.11/site-packages/nvidia/cu13/lib`
+- 已设置 `LD_LIBRARY_PATH` 环境变量（通过 `conda env config vars set`）
+- 模型权重缓存：`~/.boltz/`（~5.5 GB）
+
+**Boltz-2 使用示例：**
+```bash
+conda activate boltz
+boltz predict input.yaml --use_msa_server --out_dir output/
+```
+
+**输入格式：** YAML（支持蛋白、DNA、RNA、小分子、共价修饰、亲和力预测）
 
 ---
 
