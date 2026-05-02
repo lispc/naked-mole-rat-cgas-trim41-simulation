@@ -338,26 +338,26 @@ prot.atoms.translate(ref_u.select_atoms("protein").center_of_mass())
 
 ---
 
-### 49.5 当前运行状态（2026-05-02 12:00）
+### 49.5 当前运行状态（2026-05-02 14:00）
 
 | 实验 | 状态 | 备注 |
 |------|------|------|
 | GROMACS 2026 Hsap_WT rep1 | ✅ 200ns 完成 | 150–200ns 发生解离，数据需谨慎使用 |
 | OpenMM Hsap_WT rep1-3 | ✅ 200ns 完成 | 稳定结合，WT 参考基准 |
 | S305-phos rep1-3 | ✅ 200ns 完成 | 全部解离，结论稳固 |
-| S305E rep1-3 | 🔄 ~144ns / 200ns | 正常性能（183–185 ns/day），预计今日傍晚完成 |
-| MM-GBSA WT rep1 | ✅ 完成 | ΔG_bind = −14.82 ± 8.27 kcal/mol |
-| MM-GBSA WT rep2-3 + S305-phos rep1-3 | 🔄 Delta 修复中 | 第一轮完成但缺 Delta，已重新启动 |
+| S305E rep1-3 | 🔄 ~145ns / 200ns | 正常性能（183–185 ns/day），预计今日傍晚完成 |
+| MM-GBSA (6 reps) | ✅ **全部完成** | WT: −19.00 ± 6.14; S305-phos: −0.02 ± 0.01 kcal/mol |
 | 深度分析 (D) | ✅ 完成 | 14 张图，WT vs S305-phos 定量对比 |
+| Scripts 整理 | ✅ 完成 | 64 → 41 生产脚本 + 29 归档 + lib/ 共享库 |
 
 ---
 
 ### 49.6 待决策事项
 
-1. **是否启动 GROMACS rep2/rep3？** 验证 150–200ns 解离是否为统计波动（~36h each）
-2. **S305E 200ns 完成后是否与 S305-phos 对比？** 验证电荷效应 vs 磷酸基团特异效应
-3. **GROMACS 0–150ns 数据是否纳入正式 WT 分析？** 与 OpenMM 合并增加采样
-4. **MM-GBSA Delta 修复完成后是否立即分析 decomp？** 识别关键残基能量贡献
+1. **S305E 200ns 完成后是否与 S305-phos 对比？** 验证电荷效应 vs 磷酸基团特异效应
+2. **MM-GBSA 残基分解分析？** 识别关键贡献残基（WT 负贡献 vs S305-phos 丧失）
+3. **是否启动 GROMACS rep2/rep3？** 验证 150–200ns 解离是否为统计波动（~36h each）
+4. **基于现有数据开始写结果/方法章节？** 核心数据（WT 稳定结合 + S305-phos 解离 + MM-GBSA 定量）已足够支撑初稿
 
 ---
 
@@ -468,3 +468,84 @@ MMPBSA.py -i mmpbsa.in -o results.dat -do decomp.dat \
 | rep3 | ~99ns / 200ns | 明日凌晨 |
 
 **备注**：rep1 领先 rep2/rep3 约 45ns，可能因为 rep1 启动时间差异或 GPU 调度。rep2/rep3 的 checkpoint 更新到 05:14–05:22，当前时间 12:05，说明它们可能仍在运行（进程存在，CPU 100%），只是 checkpoint 命名在 99ns 后可能有其他格式。
+
+---
+
+## §51. Hgal NEW 系统 MD 启动 + 数据完整性审计（2026-05-02）
+
+### 51.1 数据完整性审计
+
+**核心问题**：4mut 机制研究（Hsap_WT vs Hsap_4mut AND Hgal_WT vs Hgal_4mut_rev）是否有足够数据支撑？
+
+| 系统 | OpenMM | GROMACS | 分析 | 状态 |
+|------|--------|---------|------|------|
+| **Hsap_WT** | 3 × 200ns | 1 × 200ns | 部分 | ✅ |
+| **Hsap_4mut** | 3 × 200ns | — | 部分 | ✅ |
+| **Hgal_WT (new Apr28)** | **0 reps** | — | ❌ | ❌ |
+| **Hgal_4mut_rev (new Apr28)** | **0 reps** | — | ❌ | ❌ |
+| **Hgal_WT (old domain)** | 3 × 273ns | — | ✅ | ✅ (不同构建) |
+| **Hgal_4mut_rev (old)** | **2 × 281ns** | — | ✅ | ⚠️ 缺 rep3 |
+| **S305-phos** | 3 × 200ns | — | ✅ | ✅ |
+| **S305E** | 3 × ~145ns (跑中) | — | — | ⏳ |
+
+**关键缺口**：
+1. Hgal NEW 构建（Rosetta docking + solvateOct OPC 10.0，与 Hsap 管道一致）**零生产轨迹**
+2. Hgal OLD 构建（不同 pose + solvateBox OPC 12.0）数据存在但系统不一致
+3. Hsap_4mut 轨迹略短（~193ns）但可接受
+
+**磷酸化资源评估**：
+- S305-phos 已完成 600ns + S305E 进行中 ~435ns = **1035ns 磷酸化相关 MD**
+- S305-phos 结论非常明确（完全解离，MM-GBSA ≈ 0），已足够作为论文 side note
+- **结论**：磷酸化未严重偏离核心问题，但需停止扩展
+
+### 51.2 Hgal NEW 系统目录准备
+
+为 Hgal_WT 和 Hgal_4mut_rev（Apr 28 构建，已有 prmtop + minimized.pdb）创建 replica 目录：
+
+```bash
+data/md_runs/Hgal_WT/rep{1,2,3}/     # prmtop + minimized.pdb 复制
+data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
+```
+
+### 51.3 自动调度脚本
+
+**脚本**：`scripts/02_md/auto_launch_hgal.py`（PID 1818879，后台运行）
+
+**调度策略**：
+- 维护队列：[Hgal_WT_rep2, Hgal_WT_rep3, Hgal_4mut_rev_rep1, rep2, rep3]
+- 每 60s 检查 GPU 空闲情况（nvidia-smi pmon + pgrep）
+- 当 GPU 空闲时，自动启动队列中的下一个 rep（CUDA_VISIBLE_DEVICES 显式绑定）
+
+**预期时间线**：
+- T+0：Hgal_WT_rep1 在 GPU 3 启动（200ns）
+- T+~4–6h：S305E 完成，GPU 0–2 释放 → 自动启动 3 个新 reps
+- T+~52h：第一轮 4 reps 完成 → 启动剩余 2 reps
+- **总计约 4–5 天**获得全部 6 个 reps 的 200ns 数据
+
+### 51.4 hsap_batch 数据验证
+
+此前报告 "hsap_batch COM 数据 0 frames" 为**误报**：npz 文件中 key 为 `com_dists`（非 `com`），数据完整（2000 frames each）。
+
+| Replica | COM (Å) | RMSD (Å) |
+|---------|---------|----------|
+| WT rep1 | 46.80 ± 2.49 | 8.94 ± 1.58 |
+| WT rep2 | 45.05 ± 2.63 | 7.84 ± 1.65 |
+| WT rep3 | 44.41 ± 2.63 | 12.03 ± 2.12 |
+| 4mut rep1 | 49.23 ± 2.87 | 9.76 ± 2.21 |
+| 4mut rep2 | 41.97 ± 2.63 | 7.12 ± 1.17 |
+| 4mut rep3 | 40.65 ± 2.63 | 8.00 ± 1.41 |
+
+### 51.5 当前运行状态
+
+| 进程 | GPU | 进度 | PID |
+|------|-----|------|-----|
+| S305E rep1 | 0 | 173.4/200ns | 1776799 |
+| S305E rep2 | 1 | 174.6/200ns | 1776865 |
+| S305E rep3 | 2 | 173.0/200ns | 1776930 |
+| **Hgal_WT_rep1** | **3** | **0.2/200ns** | **1818343** |
+| auto-launcher | — | 后台监控 | 1818879 |
+
+---
+
+*最后更新：2026-05-02 (Hgal NEW 系统 MD 启动，自动调度运行中，数据完整性审计完成)*
+*维护者：Kimi Code CLI*

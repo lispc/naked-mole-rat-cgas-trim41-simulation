@@ -323,5 +323,24 @@ Week 5: 对照验证 + 论文图表 + 文档撰写
 
 ---
 
+---
+
+## 附录：执行状态更新（2026-05-02）
+
+| 原计划阶段 | 实际状态 | 备注 |
+|-----------|---------|------|
+| 阶段 0–2（环境 + 结构预测 + 预分析） | ✅ 完成 | AF3, LightDock, Rosetta docking 全部完成 |
+| 阶段 3（MD 模拟） | 🔄 进行中 | Hsap_WT/4mut (6 reps) ✅；Hgal old (5 reps) ✅；Hgal NEW (0/6 reps) 刚启动 |
+| 阶段 4（结合能 + 分析） | 🔄 部分完成 | MM-GBSA (Hsap 6 reps) ✅；深度分析 (WT vs S305-phos) ✅；Hgal 批量分析待 NEW 数据 |
+| 阶段 5（对照与突变扫描） | ✅ 部分完成 | Rosetta FastRelax 突变扫描完成 |
+| 阶段 6（论文产出） | ⏳ 待启动 | 需 Hgal NEW 6 reps 完成后开始 |
+
+**关键调整**：
+1. 硬件从 Apple M3 Pro 迁移至 Linux + 4× RTX 3090
+2. 新增磷酸化研究（S305-phos/S305E）作为 side validation，不纳入主叙事
+3. Hgal NEW 构建（Apr 28, Rosetta pose + solvateOct）取代 OLD 构建（LightDock + solvateBox）
+4. GROMACS 交叉验证完成 1 rep，与 OpenMM 0–150ns 高度一致
+
 *方案撰写时间：2026-04-22*
+*最后更新：2026-05-02*
 *基于资源评估和文献现状制定*

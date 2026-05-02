@@ -2098,13 +2098,156 @@ MMPBSA.py -i mmpbsa.in -o results.dat -do decomp.dat \
 - `WT_dccm.png`, `S305phos_dccm.png`
 - `compare_com.png`, `compare_hbonds.png`
 
-### 45.5 S305E MD 进度更新
+### 45.5 MM-GBSA Delta 结果（最终）
 
-| Replica | 当前进度（2026-05-02 12:00） | 预计完成 |
+**6/6 replicas 全部完成**（2026-05-02 11:58）。并行运行 4 replicas（OMP_NUM_THREADS=4），耗时 ~24.5 min each。
+
+| System | Replica | ΔG_bind (kcal/mol) | 备注 |
+|--------|---------|-------------------|------|
+| WT | rep1 | **−14.73 ± 8.26** | 旧运行（run_mmpbsa.py） |
+| WT | rep2 | **−14.59 ± 13.69** | Delta 修复 |
+| WT | rep3 | **−27.68 ± 16.14** | Delta 修复 |
+| S305-phos | rep1 | **−0.01 ± 0.10** | Delta 修复 |
+| S305-phos | rep2 | **−0.02 ± 0.02** | Delta 修复 |
+| S305-phos | rep3 | **−0.04 ± 0.02** | Delta 修复 |
+
+**统计汇总**：
+- **WT (n=3)**: **−19.00 ± 6.14 kcal/mol**
+- **S305-phos (n=3)**: **−0.02 ± 0.01 kcal/mol**
+
+**科学解读**：
+- S305 磷酸化导致结合能**完全丧失**（从 −19 → ~0 kcal/mol），与 MD 中观察到的 COM 解离（45Å → 77Å）和界面氢键丧失（6 → 0）定量一致
+- WT rep3 偏低（−27.68）可能采样了更深结合构象，rep1/rep2 高度一致（−14.7）
+- S305-phos 3 个 replica 极度一致（−0.01 ~ −0.04），说明解离是确定性的
+
+**数据路径**：`data/analysis/mmpbsa/*_delta_results.dat`, `*_delta_decomp.dat`
+
+### 45.6 Scripts 目录整理完成
+
+**整理时间**：2026-05-02 12:00–13:00
+
+| 指标 | 整理前 | 整理后 |
+|------|--------|--------|
+| 根目录 .py | 64 | 0 |
+| 生产脚本 | 64 (12,393 行) | **41 (7,551 行)** |
+| 归档脚本 | 0 | **29 (5,090 行)** |
+| 共享库 | 0 | **5 模块** |
+
+**主要操作**：
+- 归档 17 个旧版本（v1-v3 等）到 `archive/_versions/`
+- 归档 10 个实验脚本到 `archive/_experiments/`
+- 创建 `lib/` 共享库：`paths.py`, `mda_tools.py`, `plot_style.py`, `stats.py`
+- 合并 `minimize_system.py` + `minimize_s305e.py` → `01_build/minimize.py`
+- 按功能分目录：`01_build/` → `06_structure/`
+
+### 45.7 S305E MD 进度更新
+
+| Replica | 当前进度（2026-05-02 14:00） | 预计完成 |
 |---------|---------------------------|---------|
-| rep1 | ~144ns / 200ns | 今日傍晚 |
+| rep1 | ~145ns / 200ns | 今日傍晚 |
 | rep2 | ~99ns / 200ns | 明日凌晨 |
 | rep3 | ~99ns / 200ns | 明日凌晨 |
 
 **备注**：rep1 领先 rep2/rep3 约 45ns。rep2/rep3 的 checkpoint 最后更新在 05:14–05:22，但进程仍在运行（CPU 100%），checkpoint 命名在 99ns 后可能有其他格式。
 
+
+
+---
+
+## 四十六、Hgal NEW 系统 MD 启动与数据完整性审计（2026-05-02）
+
+### 46.1 审计动机
+
+用户核心问题：4mut 机制研究是否已偏离到磷酸化？Hgal 跨物种对比数据是否足够？
+
+### 46.2 数据完整性矩阵
+
+| 系统 | OpenMM reps | GROMACS | 分析 | 备注 |
+|------|------------|---------|------|------|
+| Hsap_WT | 3 × 200ns | 1 × 200ns | 部分 | final_200ns 仅 rep1；hsap_batch 3 reps 完整 |
+| Hsap_4mut | 3 × ~193ns | — | 部分 | 略短但可用 |
+| Hgal_WT (new Apr28) | **0** | — | ❌ | Rosetta dock + solvateOct 10.0，77,794 atoms |
+| Hgal_4mut_rev (new) | **0** | — | ❌ | 同上 |
+| Hgal_WT (old domain) | 3 × 273ns | — | ✅ | LightDock + solvateBox 12.0，~83k atoms |
+| Hgal_4mut_rev (old) | 2 × 281ns | — | ✅ | 缺 rep3 |
+| S305-phos | 3 × 200ns | — | ✅ | 600ns，结论明确 |
+| S305E | 3 × ~173ns | — | — | 进行中，剩 ~27ns |
+
+**直接结论**：
+- Hsap 内对比（WT vs 4mut）：✅ 数据足够
+- Hgal 内对比（WT vs 4mut_rev）：⚠️ 旧数据勉强可用，但 NEW 构建零数据
+- 跨物种（Hsap vs Hgal）：❌ NEW 构建无数据，无法用统一管道比较
+
+### 46.3 磷酸化资源评估
+
+| 项目 | 数值 |
+|------|------|
+| S305-phos 已完成 | 600ns |
+| S305E 已进行 | ~519ns |
+| 磷酸化总计 | **1119ns** |
+| 4mut 机制总计 | Hsap 600ns + Hgal old 835ns = 1435ns |
+
+- S305-phos 发现极其明确（100% 解离，MM-GBSA ΔG ≈ 0），作为 side note 已足够
+- S305E 作为电荷对照有价值，让它跑完最后 ~27ns
+- **停止所有新的磷酸化相关实验**
+
+### 46.4 Hgal NEW 系统 MD 启动
+
+**准备工作**：
+```bash
+# 为 Hgal_WT / Hgal_4mut_rev 各创建 3 个 rep 目录
+data/md_runs/Hgal_WT/rep{1,2,3}/       ← prmtop + minimized.pdb
+data/md_runs/Hgal_4mut_rev/rep{1,2,3}/  ← prmtop + minimized.pdb
+```
+
+**立即启动**：Hgal_WT_rep1 on GPU 3（唯一空闲 GPU）
+```bash
+CUDA_VISIBLE_DEVICES=3 python scripts/02_md/run_production.py \
+  --prmtop data/md_runs/Hgal_WT/rep1/Hgal_WT.prmtop \
+  --pdb data/md_runs/Hgal_WT/rep1/Hgal_WT_minimized.pdb \
+  --name Hgal_WT_rep1 --outdir data/md_runs/Hgal_WT/rep1 \
+  --prod-ns 200 --platform CUDA --seed 20250502
+```
+
+**自动调度脚本**：`scripts/02_md/auto_launch_hgal.py`
+- 队列：Hgal_WT_rep2 → Hgal_WT_rep3 → Hgal_4mut_rev_rep1 → rep2 → rep3
+- 监控：nvidia-smi pmon + pgrep，每 60s 检查一次
+- 分配：空闲 GPU 自动分配队列中的下一个 rep
+
+### 46.5 预期时间线
+
+| 阶段 | 时间 | 事件 |
+|------|------|------|
+| T+0 | 2026-05-02 14:53 | Hgal_WT_rep1 启动（GPU 3） |
+| T+~4h | 2026-05-02 ~19:00 | S305E 完成，GPU 0–2 释放 |
+| T+~4h | 2026-05-02 ~19:05 | auto-launcher 启动 Hgal_WT_rep2/rep3 + Hgal_4mut_rev_rep1 |
+| T+~52h | 2026-05-04 ~18:00 | 第一轮 4 reps 完成 |
+| T+~52h | 2026-05-04 ~18:05 | 启动剩余 2 reps |
+| T+~104h | 2026-05-06 ~20:00 | 全部 6 reps 200ns 完成 |
+
+### 46.6 hsap_batch 数据澄清
+
+此前误报 "COM 0 frames / nan" 是检查脚本使用了错误的 key（`com` 而非 `com_dists`）。实际数据完整：
+
+| Replica | COM mean ± std (Å) | RMSD mean ± std (Å) |
+|---------|-------------------|---------------------|
+| Hsap_WT_rep1 | 46.80 ± 2.49 | 8.94 ± 1.58 |
+| Hsap_WT_rep2 | 45.05 ± 2.63 | 7.84 ± 1.65 |
+| Hsap_WT_rep3 | 44.41 ± 2.63 | 12.03 ± 2.12 |
+| Hsap_4mut_rep1 | 49.23 ± 2.87 | 9.76 ± 2.21 |
+| Hsap_4mut_rep2 | 41.97 ± 2.63 | 7.12 ± 1.17 |
+| Hsap_4mut_rep3 | 40.65 ± 2.63 | 8.00 ± 1.41 |
+
+### 46.7 后续计划
+
+1. **监控 auto-launcher**（无需手动干预，S305E 完成后自动填充 GPU）
+2. **S305E 完成后简单分析**（COM + H-bonds + MM-GBSA），作为补充材料
+3. **6 reps 全部完成后**：
+   - 批量分析（RMSD/RMSF/COM/Contacts/聚类）
+   - Hgal_WT vs Hgal_4mut_rev 直接对比
+   - 与 Hsap 数据联合，构建 4mut 机制的完整叙事
+
+---
+
+*最后更新：2026-05-02（Hgal NEW 系统 MD 启动，auto-launcher 后台运行中）*
+*维护者：Kimi Code CLI*
