@@ -25,16 +25,17 @@ QUEUE = [
 
 
 def get_running_md_pids():
-    """Get all running MD python processes."""
-    result = subprocess.run(["pgrep", "-f", "run_production.py"],
-                          capture_output=True, text=True)
+    """Get all running MD python processes (both run_production.py and run_md.py)."""
     pids = []
-    for pid_str in result.stdout.strip().split("\n"):
-        if pid_str.strip():
-            try:
-                pids.append(int(pid_str.strip()))
-            except ValueError:
-                pass
+    for pattern in ["run_production.py", "run_md.py"]:
+        result = subprocess.run(["pgrep", "-f", pattern],
+                              capture_output=True, text=True)
+        for pid_str in result.stdout.strip().split("\n"):
+            if pid_str.strip():
+                try:
+                    pids.append(int(pid_str.strip()))
+                except ValueError:
+                    pass
     return pids
 
 
@@ -111,9 +112,46 @@ def launch_rep(system, rep, gpu_id):
     return proc.pid
 
 
+def scan_running_reps():
+    """Scan for already-running Hgal MD processes and remove from queue."""
+    running = set()
+    for pattern in ["run_production.py", "run_md.py"]:
+        result = subprocess.run(["pgrep", "-f", pattern],
+                              capture_output=True, text=True)
+        for pid_str in result.stdout.strip().split("\n"):
+            if not pid_str.strip():
+                continue
+            try:
+                with open(f"/proc/{int(pid_str.strip())}/cmdline") as f:
+                    cmd = f.read().replace("\0", " ")
+                # Extract system and rep from --name argument
+                import re
+                m = re.search(r"--name\s+(\S+)", cmd)
+                if m:
+                    name = m.group(1)
+                    # Parse Hgal_WT_rep1 or Hgal_4mut_rev_rep2
+                    if "Hgal_WT" in name:
+                        rep = int(name.replace("Hgal_WT_rep", ""))
+                        running.add(("Hgal_WT", rep))
+                    elif "Hgal_4mut_rev" in name:
+                        rep = int(name.replace("Hgal_4mut_rev_rep", ""))
+                        running.add(("Hgal_4mut_rev", rep))
+            except Exception:
+                pass
+    return running
+
+
 def main():
     print(f"[{time.strftime('%H:%M:%S')}] Hgal NEW auto-launcher started.")
-    print(f"  Queue: {len(QUEUE)} replicas")
+    print(f"  Initial queue: {len(QUEUE)} replicas")
+    
+    # Remove already-running reps from queue
+    running = scan_running_reps()
+    if running:
+        print(f"  Detected already running: {sorted(running)}")
+        QUEUE[:] = [item for item in QUEUE if item not in running]
+        print(f"  Adjusted queue: {len(QUEUE)} replicas")
+    
     print(f"  Checking every 60 seconds...")
 
     while QUEUE:

@@ -424,7 +424,50 @@ MMPBSA.py -i mmpbsa.in -o results.dat -do decomp.dat \
 
 **修复状态**：2026-05-02 11:01 启动，串行运行 5 replicas，预计 ~1 小时完成。
 
-### 50.4 深度分析（Option D）：200ns 数据全面分析
+### 50.4 MM-GBSA Delta 结果（最终）
+
+**6/6 replicas 全部完成**（2026-05-02 11:58）。并行运行 4 replicas（OMP_NUM_THREADS=4），耗时 ~24.5 min each。
+
+| System | Replica | ΔG_bind (kcal/mol) | 备注 |
+|--------|---------|-------------------|------|
+| WT | rep1 | **−14.73 ± 8.26** | 旧运行（run_mmpbsa.py） |
+| WT | rep2 | **−14.59 ± 13.69** | Delta 修复 |
+| WT | rep3 | **−27.68 ± 16.14** | Delta 修复 |
+| S305-phos | rep1 | **−0.01 ± 0.10** | Delta 修复 |
+| S305-phos | rep2 | **−0.02 ± 0.02** | Delta 修复 |
+| S305-phos | rep3 | **−0.04 ± 0.02** | Delta 修复 |
+
+**统计汇总**：
+- **WT (n=3)**: **−19.00 ± 6.14 kcal/mol**
+- **S305-phos (n=3)**: **−0.02 ± 0.01 kcal/mol**
+
+**科学解读**：
+- S305 磷酸化导致结合能**完全丧失**（从 −19 → ~0 kcal/mol），与 MD 中观察到的 COM 解离（45Å → 77Å）和界面氢键丧失（6 → 0）定量一致
+- WT rep3 偏低（−27.68）可能采样了更深结合构象，rep1/rep2 高度一致（−14.7）
+- S305-phos 3 个 replica 极度一致（−0.01 ~ −0.04），说明解离是确定性的
+
+**数据路径**：`data/analysis/mmpbsa/*_delta_results.dat`, `*_delta_decomp.dat`
+
+### 50.5 Scripts 目录整理完成
+
+**整理时间**：2026-05-02 12:00–13:00
+
+| 指标 | 整理前 | 整理后 |
+|------|--------|--------|
+| 根目录 .py | 64 | 0 |
+| 生产脚本 | 64 (12,393 行) | **41 (7,551 行)** |
+| 归档脚本 | 0 | **29 (5,090 行)** |
+| 共享库 | 0 | **5 模块** |
+
+**主要操作**：
+- 归档 17 个旧版本（v1-v3 等）到 `archive/_versions/`
+- 归档 10 个实验脚本到 `archive/_experiments/`
+- 创建 `lib/` 共享库：`paths.py`, `mda_tools.py`, `plot_style.py`, `stats.py`
+- 合并 `minimize_system.py` + `minimize_s305e.py` → `01_build/minimize.py`
+- 按功能分目录：`01_build/` → `06_structure/`
+
+
+### 50.6 深度分析（Option D）：200ns 数据全面分析
 
 **分析脚本**：`scripts/deep_analysis_200ns.py`
 
@@ -459,7 +502,7 @@ MMPBSA.py -i mmpbsa.in -o results.dat -do decomp.dat \
 - WT 3 个 replica 高度一致（COM ~45Å，H-bonds ~6），证明结合态稳定
 - S305-phos 3 个 replica 全部解离（COM 68–90Å），结论统计显著
 
-### 50.5 S305E MD 进度更新
+### 50.7 S305E MD 进度更新
 
 | Replica | 当前进度 | 预计完成 |
 |---------|---------|---------|
@@ -507,7 +550,53 @@ data/md_runs/Hgal_WT/rep{1,2,3}/     # prmtop + minimized.pdb 复制
 data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 ```
 
-### 51.3 自动调度脚本
+### 51.3 磷酸化资源评估
+
+| 项目 | 数值 |
+|------|------|
+| S305-phos 已完成 | 600ns |
+| S305E 已进行 | ~519ns |
+| 磷酸化总计 | **1119ns** |
+| 4mut 机制总计 | Hsap 600ns + Hgal old 835ns = 1435ns |
+
+- S305-phos 发现极其明确（100% 解离，MM-GBSA ΔG ≈ 0），作为 side note 已足够
+- S305E 作为电荷对照有价值，让它跑完最后 ~27ns
+- **停止所有新的磷酸化相关实验**
+
+### 51.4 预期时间线
+
+| 阶段 | 时间 | 事件 |
+|------|------|------|
+| T+0 | 2026-05-02 14:53 | Hgal_WT_rep1 启动（GPU 3） |
+| T+~4h | 2026-05-02 ~19:00 | S305E 完成，GPU 0–2 释放 |
+| T+~4h | 2026-05-02 ~19:05 | auto-launcher 启动 Hgal_WT_rep2/rep3 + Hgal_4mut_rev_rep1 |
+| T+~52h | 2026-05-04 ~18:00 | 第一轮 4 reps 完成 |
+| T+~52h | 2026-05-04 ~18:05 | 启动剩余 2 reps |
+| T+~104h | 2026-05-06 ~20:00 | 全部 6 reps 200ns 完成 |
+
+### 51.5 hsap_batch 数据澄清
+
+此前误报 "COM 0 frames / nan" 是检查脚本使用了错误的 key（`com` 而非 `com_dists`）。实际数据完整：
+
+| Replica | COM mean ± std (Å) | RMSD mean ± std (Å) |
+|---------|-------------------|---------------------|
+| Hsap_WT_rep1 | 46.80 ± 2.49 | 8.94 ± 1.58 |
+| Hsap_WT_rep2 | 45.05 ± 2.63 | 7.84 ± 1.65 |
+| Hsap_WT_rep3 | 44.41 ± 2.63 | 12.03 ± 2.12 |
+| Hsap_4mut_rep1 | 49.23 ± 2.87 | 9.76 ± 2.21 |
+| Hsap_4mut_rep2 | 41.97 ± 2.63 | 7.12 ± 1.17 |
+| Hsap_4mut_rep3 | 40.65 ± 2.63 | 8.00 ± 1.41 |
+
+### 51.6 后续计划
+
+1. **监控 auto-launcher**（无需手动干预，S305E 完成后自动填充 GPU）
+2. **S305E 完成后简单分析**（COM + H-bonds + MM-GBSA），作为补充材料
+3. **6 reps 全部完成后**：
+   - 批量分析（RMSD/RMSF/COM/Contacts/聚类）
+   - Hgal_WT vs Hgal_4mut_rev 直接对比
+   - 与 Hsap 数据联合，构建 4mut 机制的完整叙事
+
+### 51.7 自动调度脚本
 
 **脚本**：`scripts/02_md/auto_launch_hgal.py`（PID 1818879，后台运行）
 
@@ -522,7 +611,7 @@ data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 - T+~52h：第一轮 4 reps 完成 → 启动剩余 2 reps
 - **总计约 4–5 天**获得全部 6 个 reps 的 200ns 数据
 
-### 51.4 hsap_batch 数据验证
+### 51.8 hsap_batch 数据验证
 
 此前报告 "hsap_batch COM 数据 0 frames" 为**误报**：npz 文件中 key 为 `com_dists`（非 `com`），数据完整（2000 frames each）。
 
@@ -535,7 +624,7 @@ data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 | 4mut rep2 | 41.97 ± 2.63 | 7.12 ± 1.17 |
 | 4mut rep3 | 40.65 ± 2.63 | 8.00 ± 1.41 |
 
-### 51.5 当前运行状态
+### 51.9 当前运行状态
 
 | 进程 | GPU | 进度 | PID |
 |------|-----|------|-----|
@@ -629,5 +718,120 @@ data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 
 ---
 
-*最后更新：2026-05-02（MM-GBSA 过度解读纠正 + 实验验证方向）*
+## §53. S305E 完成 + 4mut_rev NaN 修复 + ΔRMSF/ΔDCCM（2026-05-02 ~ 2026-05-03）
+
+### 53.1 S305E 全部 200ns 完成
+
+| Replica | 完成时间 | 轨迹大小 |
+|---------|---------|---------|
+| rep1 | 2026-05-02 21:37 | 2.2 GB |
+| rep2 | 2026-05-02 ~21:00 | 2.2 GB |
+| rep3 | 2026-05-02 ~18:30 | 2.2 GB |
+
+**产出**：`data/md_runs/Hsap_WT_S305E/rep{1,2,3}/Hsap_WT_S305E_rep{1,2,3}_prod.dcd`
+
+### 53.2 S305E MM-GBSA（3 reps 并行）
+
+| Replica | ΔG_bind (kcal/mol) | 备注 |
+|---------|-------------------|------|
+| rep1 | **−11.85 ± 9.93** | 弱结合 |
+| rep2 | **−22.89 ± 13.64** | 稳定结合 |
+| rep3 | **+7.20 ± 7.84** | ❌ **完全解离** |
+| **Mean** | **−9.18 ± 12.43** | 变异系数 135% |
+
+**关键发现**：
+- 与 WT（−18.6 ± 7.5）相比，S305E 平均弱 ~9.4 kcal/mol
+- **极端异质性**：rep3 ΔG > 0（完全解离），rep2 却比 WT 更稳定
+- 说明 S305E 的 Glu 突变引入了**构象选择性**，部分轨迹保持结合，部分解离
+- 与 4mut 的行为模式一致（4mut 也有高变异性：71.8% 稳定帧 vs 33.7% WT）
+
+**技术细节**：
+- MMPBSA.py 需要 `.nc` 格式，原始 `.dcd` 需经 MDAnalysis 转换为 protein-only `.nc`
+- prmtop 分割用 `ante-MMPBSA.py`（parmed strip 会导致 LJ 参数不匹配）
+- 3 reps 并行，OMP_NUM_THREADS=4，耗时 ~15 min/rep
+
+**数据路径**：`data/analysis/mmpbsa/S305E_rep{1,2,3}_results_v3.dat`
+
+### 53.3 4mut_rev NaN 崩溃修复
+
+**根本原因**：`Hgal_4mut_rev` 的 `minimized.pdb` 在 heating 阶段触发 `Particle coordinate is NaN`。
+
+**诊断**：
+- 初始能量：−763,979 kJ/mol（合理）
+- 但原最小化使用了 `constraints=app.HBonds`，导致 bad contacts 无法充分弛豫
+- heating 升温后 steric clashes 触发 NaN
+
+**修复**：深度重新最小化（50,000 步 → 实际 10,000 步即收敛，无约束）
+- 初始：−763,979 kJ/mol
+- 最终：−1,825,910 kJ/mol
+- ΔE：−1,061,931 kJ/mol
+
+**验证**：heating 测试（0K → 300K，10 步 × 100 steps）完全通过，能量曲线平滑。
+
+**部署**：
+- 复制 `reminimized.pdb` 到 rep1/2/3
+- rep1 启动于 GPU 2（独享），已正常运行
+- rep2/rep3 于 S305E 完成后启动于 GPU 0/1
+
+### 53.4 Delta RMSF 与 Delta DCCM
+
+**ΔRMSF（WT vs 4mut）**：
+- 541 个残基，0 个 Bonferroni 显著（p < 0.05）
+- 19 个未校正显著，但经 541 重 Bonferroni 校正后全部不显著
+- **结论**：4mut 并未显著改变 cGAS 的整体柔性
+
+**ΔDCCM（WT vs 4mut）**：
+- 提取 top 50 changed cross-correlations
+- 最大变化：Res 240–255 区域（SER/ALA ↔ PRO/ARG）耦合增强
+- 数据路径：`data/analysis/delta_dccm/top_changed_couplings.txt`
+
+**对 "Tight-but-Floppy" 假说的影响**：
+- RMSF 不显著 → **不支持** "4mut 增加整体柔性"
+- 但 DCCM 显示局部耦合变化 → 可能支持 "局部变构路径改变"
+- 需结合 RING-Lys 距离 PMF 进一步验证
+
+### 53.5 Auto-launcher 问题与停用
+
+**发现的问题**：
+1. **只检测 `run_production.py`，不检测 `run_md.py`** → S305E（用 `run_md.py`）对 launcher 不可见 → GPU 误判为空闲 → 重复启动
+2. **CUDA context 初始化 race**：新进程启动后 ~5–10 秒才出现在 `nvidia-smi pmon` 中，launcher 在此期间重复检测到空闲 GPU
+3. **Python stdout 缓冲**：nohup 环境下 `print()` 被块缓冲，log 文件 1 小时无更新
+
+**修复**：
+- 检测逻辑同时检查 `run_md.py` 和 `run_production.py`
+- 用 `PYTHONUNBUFFERED=1 python -u` 启动
+
+**最终决定**：**停用 auto-launcher**，改为手动管理。原因：
+- GPU 共享导致速度减半，不如等 S305E 完成后手动启动
+- 4mut_rev 的 NaN 问题暴露了 launcher 无法处理构建错误
+- Hgal 系统仅剩 6 reps，手动管理更可控
+
+### 53.6 Hgal 系统当前进度
+
+| 系统 | Rep1 | Rep2 | Rep3 | GPU | 预计完成 |
+|------|------|------|------|-----|---------|
+| Hgal_WT | 151.8 ns | 62.5 ns | 65.5 ns | 3/0/1 | ~5h / ~30h / ~30h |
+| Hgal_4mut_rev | 67.3 ns | 28.7 ns | 29.0 ns | 2/0/1 | ~15h / ~38h / ~38h |
+
+**速度对比**：
+- 独享 GPU：~9 ns/h
+- 共享 GPU（2 进程）：~4.5 ns/h
+
+### 53.7 S305E 轨迹分析（运行中）
+
+**脚本**：`scripts/03_analysis/analyze_s305e.py`
+**指标**：COM 距离、界面 H-bonds、cGAS Rg、蛋白 CA RMSD
+**状态**：已运行 ~17h，WT rep1 H-bonds 计算中（100% CPU）
+**预计**：1–3 天（H-bond 分析对大体系极慢）
+**输出**：`data/analysis/s305e_vs_wt/`
+
+### 53.8 项目日志整理
+
+- `docs/00-project/project_log_2026_04.md`：已归档，删除 §45–§47（五月内容），添加归档说明
+- `docs/00-project/project_log.md`：主日志，补充了从 April 文件迁移的缺失子章节（50.4/50.5、51.3–51.6）
+- 以后所有记录只写 `project_log.md`
+
+---
+
+*最后更新：2026-05-03（S305E 完成 + 4mut_rev 修复 + ΔRMSF/ΔDCCM + 日志整理）*
 *维护者：Kimi Code CLI*
