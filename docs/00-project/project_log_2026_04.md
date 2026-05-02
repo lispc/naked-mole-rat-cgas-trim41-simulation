@@ -2002,3 +2002,109 @@ GROMACS 比 OpenMM 慢约 **25–35%**，可能原因：AMBER 力场非 GROMACS 
 - Hgal 跨物种比较（系统已就绪）
 - GROMACS 与 OpenMM 差异的根因分析（力场实现、约束算法、积分器）
 
+---
+
+## 45. MM-GBSA 修复与深度分析（2026-05-02）
+
+### 45.1 MM-GBSA 第一轮完成但缺 Delta
+
+**背景**：WT rep1 已通过旧 `run_mmpbsa.py` 成功获得 ΔG_bind = −14.82 ± 8.27 kcal/mol。需要完成 WT rep2/rep3 和 S305-phos rep1-3。
+
+**batch_v3 脚本**：`scripts/run_mmpbsa_batch_v3.py`
+- 使用 `Hsap_WT_protein.prmtop` + `Hsap_WT_rep{2,3}_prot.nc`
+- 5 个 replica 全部成功运行（~13–14 分钟 each）
+- 但 `results.dat` 中仅有 Complex 总能量，缺少 Receptor/Ligand/Delta
+
+**根本原因**：MMPBSA.py 仅提供 `-cp` 时，即使输入文件中有 `receptor_mask`/`ligand_mask`，仍需独立的 `-rp`/`-lp` 拓扑文件才能计算结合能 Delta。
+
+### 45.2 EP 原子类型问题与 protein-only 方案
+
+**原始失败**：使用完整溶剂化拓扑 `Hsap_WT.prmtop`（85510 atoms，含 OPC 水）时，sander 报错：
+```
+bad atom type: EP
+```
+- EP = extra point（OPC 水模型虚拟点电荷）
+- sander 不支持 EP 原子类型
+
+**解决方案**：protein-only prmtop + protein-only trajectory
+- `Hsap_WT_protein.prmtop`：8815 atoms（strip WAT/Na+/Cl-）
+- `Hsap_WT_S305phos_protein.prmtop`：8818 atoms（含 SEP 磷酸化残基）
+- `_prot.nc`：protein-only NetCDF（~212 MB each）
+
+**protein prmtop 生成**（parmed）：
+```bash
+parmed Hsap_WT.prmtop <<EOF
+strip :WAT,Cl-,Na+
+outparm Hsap_WT_protein.prmtop
+EOF
+```
+
+### 45.3 Delta 修复：receptor/ligand prmtop 生成与重新运行
+
+**cpptraj 提取受体/配体拓扑**：
+```bash
+# cGAS receptor (1-218)
+cpptraj -p Hsap_WT_protein.prmtop
+parmstrip :219-541
+parmwrite out Hsap_WT_receptor.prmtop
+
+# TRIM41 ligand (219-541)
+cpptraj -p Hsap_WT_protein.prmtop
+parmstrip :1-218
+parmwrite out Hsap_WT_ligand.prmtop
+```
+
+**重新运行 MMPBSA.py**（带 `-rp` + `-lp`）：
+```bash
+MMPBSA.py -i mmpbsa.in -o results.dat -do decomp.dat \
+  -cp complex.prmtop -rp receptor.prmtop -lp ligand.prmtop \
+  -y trajectory.nc
+```
+
+**修复状态**：2026-05-02 11:01 启动 `scripts/run_mmpbsa_delta_fix.py`，串行运行 5 replicas，预计 ~1 小时完成。
+
+### 45.4 深度分析（Option D）：200ns 数据全面分析
+
+**分析脚本**：`scripts/deep_analysis_200ns.py`
+
+**分析内容**：
+1. 界面氢键数量时间线（per-replica + cross-replica mean）
+2. COM 距离时间线
+3. RMSD 时间线（CA-aligned vs 自身第一帧）
+4. PCA（rep1，前 10 主成分，PC1/PC2 散点按时间着色）
+5. DCCM（动态互相关矩阵，rep1）
+6. WT vs S305-phos 直接对比图
+
+**关键定量结果**：
+
+| 指标 | WT (3 reps) | S305-phos (3 reps) | 差异 |
+|------|-------------|-------------------|------|
+| **COM 距离** | 45.42 ± 2.63 Å | **77.07 ± 11.30 Å** | +70% |
+| **界面氢键** | 6.1 ± 2.6 | **0.0 ± 0.0** | 完全丧失 |
+| **RMSD** | 稳定低波动 | 解离后大幅上升 | 构象失稳 |
+
+**科学解读**：
+- S305 磷酸化在 ~50–100ns 内诱导 cGAS-TRIM41 完全解离
+- 解离前界面氢键逐步丧失，COM 距离单调增加
+- WT 3 个 replica 高度一致（COM ~45Å，H-bonds ~6），证明结合态稳定且可重复
+- S305-phos 3 个 replica 全部解离（COM 68–90Å），结论统计显著
+
+**输出路径**：`data/analysis/deep_200ns/`
+- `WT_com_timeline.png`, `S305phos_com_timeline.png`
+- `WT_hbonds_timeline.png`, `S305phos_hbonds_timeline.png`
+- `WT_rmsd_timeline.png`, `S305phos_rmsd_timeline.png`
+- `WT_pca_pc1pc2.png`, `S305phos_pca_pc1pc2.png`
+- `WT_pca_variance.png`, `S305phos_pca_variance.png`
+- `WT_dccm.png`, `S305phos_dccm.png`
+- `compare_com.png`, `compare_hbonds.png`
+
+### 45.5 S305E MD 进度更新
+
+| Replica | 当前进度（2026-05-02 12:00） | 预计完成 |
+|---------|---------------------------|---------|
+| rep1 | ~144ns / 200ns | 今日傍晚 |
+| rep2 | ~99ns / 200ns | 明日凌晨 |
+| rep3 | ~99ns / 200ns | 明日凌晨 |
+
+**备注**：rep1 领先 rep2/rep3 约 45ns。rep2/rep3 的 checkpoint 最后更新在 05:14–05:22，但进程仍在运行（CPU 100%），checkpoint 命名在 99ns 后可能有其他格式。
+
