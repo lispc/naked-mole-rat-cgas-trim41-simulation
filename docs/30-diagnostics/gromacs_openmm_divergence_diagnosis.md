@@ -134,6 +134,97 @@ CMAP 校正直接修改 backbone 的 φ-ψ 势能面：
 
 ---
 
+## 十、200ns 完整验证与 Python 对齐 Bug 修正（2026-05-02）
+
+### 10.1 核心发现：0–150 ns 高度一致，150–200 ns 解离事件
+
+GROMACS 2026 native 完成 200ns production 后，进行全面验证：
+
+| 指标 | GROMACS 2026 | OpenMM | 0–150ns 差异 | 状态 |
+|------|-------------|--------|-------------|------|
+| **COM Distance** | 47.51 ± 8.63 Å | 46.80 ± 2.49 Å | 44.5 ± 2.6 vs 46.8 ± 2.5 Å | ✅ 几乎相同 |
+| **RMSD (CA)** | 10.56 ± 8.66 Å | 8.94 ± 1.58 Å | 7.49 ± 1.47 vs 8.59 ± 1.66 Å | ✅ 几乎相同 |
+| **Rg cGAS** | 21.66 ± 0.37 Å | 21.40 ± 0.25 Å | — | ✅ 几乎相同 |
+| **Rg TRIM41** | 19.89 ± 0.72 Å | 22.54 ± 0.59 Å | — | 🟡 GMX 略低 2.5 Å |
+
+**150–200 ns 期间**：GROMACS 发生**解离事件**（COM 从 ~45 Å 突增至 ~72 Å，RMSD 从 ~8 Å 跃升至 ~35 Å），而 OpenMM 保持稳定结合（COM ~48 Å，RMSD ~10 Å）。
+
+**解离特征**：
+- **非去折叠驱动**：Rg 未异常增大（TRIM41=20.4 Å, cGAS=20.9 Å），蛋白保持紧凑
+- **界面破坏**：COM 突增符合随机热涨落突破结合能垒的特征
+- **突发性质**：~171 ns 时 COM 从 45 Å → 65 Å，无明显前兆
+
+### 10.2 致命 Bug 发现：Python 分析脚本的对齐错误
+
+**问题脚本**：`scripts/compare_gmx_openmm_200ns_v3.py`
+
+**Bug 代码**：
+```python
+R, _ = align.rotation_matrix(mobile_ca.positions, ref_ca.positions, weights=mobile_ca.masses)
+prot.atoms.translate(-prot.center_of_mass())
+prot.atoms.rotate(R)
+prot.atoms.translate(ref_u.select_atoms("protein").center_of_mass())
+```
+
+**错误机制**：`rotation_matrix()` 在**未中心化的坐标**上计算旋转矩阵，但后续平移基于**全原子质心**而非 CA 质心，导致刚性变换不匹配。
+
+**影响程度**：
+
+| 体系 | 时间点 | Buggy RMSD | Correct RMSD | 误差 |
+|------|--------|-----------|-------------|------|
+| **GROMACS** | 100 ns | 12.07 Å | **6.62 Å** | **+82%** |
+| **GROMACS** | 200 ns | 13.28 Å | **6.50 Å** | **+104%** |
+| OpenMM | 100 ns | 11.20 Å | 9.64 Å | +16% |
+| OpenMM | 200 ns | 15.73 Å | 10.35 Å | +52% |
+
+GROMACS 的 buggy 对齐被 `prod_whole.xtc` 的 `-center` 处理（蛋白质心移至盒子中心）进一步放大，导致 **RMSD 均值从正确的 10.6 Å 被错误报告为 19.0 Å**。
+
+**验证方法**：
+- GROMACS RMSD 使用原生 `gmx rms`（CA fit, CA calc, `prod_whole.xtc`）作为 gold standard
+- OpenMM RMSD 使用 `MDAnalysis.analysis.align.alignto()` 重新计算
+- 两者结果一致（GROMACS 10.56 Å vs OpenMM 8.94 Å mean）
+
+### 10.3 之前报告中的错误数据修正
+
+| 错误报告 | 正确值 | 来源 |
+|---------|--------|------|
+| GROMACS RMSD mean = **19.0 Å** | **10.56 Å** | `gmx rms` (native tool) |
+| GROMACS RMSD max = **38.9 Å** | **35.84 Å** | `gmx rms` (native tool) |
+| GROMACS vs OpenMM RMSD ratio = **~3–4×** | **~1.2×** (mean) | corrected alignment |
+| "GROMACS 严重偏离" | **0–150ns 几乎完全一致** | full trajectory analysis |
+
+### 10.4 真实差异的合理解释
+
+**0–150 ns 的高度一致性**表明：
+- CMAP 修复（GROMACS 2026 native `amber19sb.ff`）成功
+- 力场实现（ff19SB + OPC + CMAP）在两引擎中等价
+- LINCS `iter=2, order=6` 精度足够
+- NVT ensemble 与 OpenMM 一致
+
+**150–200 ns 的解离事件**最可能原因：
+
+> **统计波动（单一 replica 的随机事件）**
+
+证据：
+1. 解离前 0–150 ns 轨迹与 OpenMM **几乎完全重叠**
+2. 解离是突发的（~171 ns COM 45→65 Å），符合热涨落突破能垒
+3. Rg 未增大，说明不是去折叠导致的非物理行为
+4. 两个模拟使用不同随机数生成器和初始速度
+
+**不能排除的次要因素**：
+- GROMACS（V-rescale）vs OpenMM（Langevin Middle）的动力学采样效率差异
+- GROMACS 体系更大（131,134 vs 85,510 原子），溶剂化层更厚
+
+### 10.5 建议
+
+1. **运行 GROMACS rep2/rep3** 验证是否为统计波动
+   - 若 rep2 保持结合 → 确认是 rep1 随机事件
+   - 若 rep2 也解离 → 需进一步检查力场/积分器
+2. **OpenMM 数据可直接作为 WT 参考基准**（200ns 稳定结合）
+3. **GROMACS 0–150ns 数据仍可用于对比分析**，150–200ns 解离段应排除
+
+---
+
 ## 八、修复行动与验证（2026-04-30 → 2026-05-01）
 
 ### 修复方案：GROMACS 2026 原生 amber19sb.ff

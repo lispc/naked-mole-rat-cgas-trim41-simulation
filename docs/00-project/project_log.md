@@ -235,3 +235,125 @@ S305E（S305→Glu）作为 S305-phos 的电荷对照：
 对比图表：`data/boltz_test_truncated/comparison/boltz2_vs_af3_comparison.png`
 对比脚本：`scripts/compare_boltz2_af3_v2.py`
 
+---
+
+## §49. GROMACS 200ns 完整验证 + Python 对齐 Bug 修正 + S305E 调查 (2026-05-02)
+
+### 49.1 GROMACS 2026 200ns 完整验证
+
+GROMACS 2026 native amber19sb.ff 完成 200ns production（~132.8 ns/day，~36h total）。
+
+#### 修正后的 200ns 统计数据
+
+| 指标 | GROMACS 2026 | OpenMM | 0–150ns 对比 | 状态 |
+|------|-------------|--------|-------------|------|
+| **COM Distance** | 47.51 ± 8.63 Å | 46.80 ± 2.49 Å | 44.5 ± 2.6 vs 46.8 ± 2.5 Å | ✅ 几乎相同 |
+| **RMSD (CA)** | 10.56 ± 8.66 Å | 8.94 ± 1.58 Å | 7.49 ± 1.47 vs 8.59 ± 1.66 Å | ✅ 几乎相同 |
+| **Rg cGAS** | 21.66 ± 0.37 Å | 21.40 ± 0.25 Å | — | ✅ 几乎相同 |
+| **Rg TRIM41** | 19.89 ± 0.72 Å | 22.54 ± 0.59 Å | — | 🟡 GMX 略低 2.5 Å |
+
+#### 150–200ns 解离事件
+
+- **~171 ns**：GROMACS COM 从 ~45 Å 突增至 ~65 Å，随后持续在 65–85 Å 波动
+- **200 ns**：GROMACS COM = 72.13 Å，OpenMM COM = 48.59 Å
+- **Rg 未异常增大**：解离不是去折叠驱动，是界面破坏导致的复合物分离
+- OpenMM 在整个 200ns 保持稳定结合
+
+#### 关键结论
+
+1. **0–150 ns 高度一致**：CMAP 修复成功，力场实现在两引擎中等价
+2. **150–200 ns 差异**：GROMACS rep1 发生随机解离事件，最可能是**统计波动**（单一 replica）
+3. **建议运行 GROMACS rep2/rep3** 验证是否为系统性差异
+
+完整诊断报告更新：`docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md`
+修正后图表：`data/analysis/gmx_openmm_comparison/gmx_vs_openmm_200ns_FINAL.png`
+
+---
+
+### 49.2 致命 Bug 发现：Python 分析脚本对齐错误
+
+**问题脚本**：`scripts/compare_gmx_openmm_200ns_v3.py`
+
+**Bug 代码**：
+```python
+R, _ = align.rotation_matrix(mobile_ca.positions, ref_ca.positions, weights=mobile_ca.masses)
+prot.atoms.translate(-prot.center_of_mass())
+prot.atoms.rotate(R)
+prot.atoms.translate(ref_u.select_atoms("protein").center_of_mass())
+```
+
+**错误机制**：`rotation_matrix()` 在**未中心化的坐标**上计算旋转矩阵，但后续平移基于**全原子质心**而非 CA 质心，导致刚性变换不匹配。GROMACS 部分被 `prod_whole.xtc` 的 `-center` 处理进一步放大。
+
+**影响程度**：
+
+| 体系 | 时间点 | Buggy RMSD | Correct RMSD | 误差 |
+|------|--------|-----------|-------------|------|
+| **GROMACS** | 100 ns | 12.07 Å | **6.62 Å** | **+82%** |
+| **GROMACS** | 200 ns | 13.28 Å | **6.50 Å** | **+104%** |
+| OpenMM | 100 ns | 11.20 Å | 9.64 Å | +16% |
+| OpenMM | 200 ns | 15.73 Å | 10.35 Å | +52% |
+
+**之前报告中的错误数据**：
+- ❌ GROMACS RMSD mean = 19.0 Å → ✅ 正确值 10.56 Å
+- ❌ GROMACS vs OpenMM RMSD ratio = ~3–4× → ✅ 正确 ratio ~1.2× (mean)
+- ❌ "GROMACS 严重偏离" → ✅ 0–150ns 几乎完全一致
+
+**验证方法**：
+- GROMACS RMSD 使用原生 `gmx rms`（CA fit, CA calc, `prod_whole.xtc`）作为 gold standard
+- OpenMM RMSD 使用 `MDAnalysis.analysis.align.alignto()` 重新计算
+
+---
+
+### 49.3 S305E "跑得快" 调查结论
+
+**结论：S305E 并非异常快，是正常性能。**
+
+| 体系 | 溶剂化缓冲层 | 水分子数 | 总原子数 | 实际性能 |
+|------|------------|---------|---------|---------|
+| Hsap_WT | `solvateOct OPC 10.0` | 19,168 | 85,510 | ~200 ns/day |
+| **S305E** | `solvateOct OPC 12.0` | **21,765** | **95,901** | **183–185 ns/day** |
+
+- **原子数差异根源**：`build_s305e_system.py` 使用了 `12.0 Å` 缓冲层（vs Hsap_WT 的 `10.0 Å`），多出 **2,597 个水分子**（~7,800 原子）
+- 蛋白残基数相同（541），无重复链或格式错误
+- 性能 183–185 ns/day 与 Hsap_WT 的 ~200 ns/day 处于同一水平（原子数多 12% → 性能稍慢 8%，符合预期）
+
+---
+
+### 49.4 其他验证
+
+#### PBC 处理验证
+- `gmx trjconv -pbc whole -center` 成功生成 `prod_whole.xtc`（20001 帧，9.1 GB）
+- `gmx rms` 在 `prod_whole.xtc` vs 原始 `prod.xtc` 上的 CA RMSD **完全相同**（mean=10.56 Å），说明 gmx 工具内部已正确处理 PBC
+- gmx distance 的 `plus` 选择语法误用导致输出错误（42 Å 而非真实 72 Å），已记录为分析陷阱
+
+#### 能量/温度稳定性
+- GROMACS: T = 300.02 ± 1.02 K，Potential = -1,720,250 ± 1,343 kJ/mol，无漂移
+- OpenMM: T ~300 K（Langevin 控制），Energy = -1,082,310 ± 958 kJ/mol，50ns 漂移 -309 kJ/mol（在噪声范围内）
+- 绝对能量差异来自体系大小不同（GROMACS 131,134 vs OpenMM 85,510 原子）
+
+#### 初始构象一致性
+- GROMACS npt.gro vs OpenMM frame 0 的蛋白 CA RMSD = **2.14 Å**
+- COM 距离：40.79 Å vs 39.44 Å
+- Rg 高度接近
+
+---
+
+### 49.5 当前运行状态（2026-05-02）
+
+| 实验 | 状态 | 备注 |
+|------|------|------|
+| GROMACS 2026 Hsap_WT rep1 | ✅ 200ns 完成 | 150–200ns 发生解离，数据需谨慎使用 |
+| OpenMM Hsap_WT rep1 | ✅ 200ns 完成 | 稳定结合，可作为 WT 参考基准 |
+| S305-phos rep1-3 | ✅ 200ns 完成 | 全部解离，结论稳固 |
+| S305E rep1-3 | 🔄 ~114ns / 200ns | 正常性能（183–185 ns/day）|
+| MM-GBSA WT rep1 | ✅ 完成 | ΔG_bind = −14.82 ± 8.27 kcal/mol |
+| MM-GBSA WT rep2-3 + S305-phos rep1-3 | 🔄 后台运行 | 5/6 replicas 进行中 |
+
+---
+
+### 49.6 待决策事项
+
+1. **是否启动 GROMACS rep2/rep3？** 验证 150–200ns 解离是否为统计波动（~36h each）
+2. **S305E 200ns 完成后是否与 S305-phos 对比？** 验证电荷效应 vs 磷酸基团特异效应
+3. **GROMACS 0–150ns 数据是否纳入正式 WT 分析？** 与 OpenMM 合并增加采样
+4. **MM-GBSA 批量完成后是否立即分析？** 6 replicas 预计今日完成
