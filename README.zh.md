@@ -76,7 +76,8 @@
 | **Hsap_4mut** | 人源 | WT | D431S, K479E, L495Y, K498T | 3 | 已完成（3 × 200 ns） |
 | **Hgal_WT** | 裸鼹鼠 WT | WT | — | 3 | 已完成（3 × 200 ns） |
 | **Hgal_4mut_rev** | 裸鼹鼠 | WT | S463D, E511K, Y527L, T530K | 2 | 已完成（2 × 200 ns） |
-| **Hsap_WT_S305phos** | 人源 WT, SEP@305 | WT | — | 3 | 进行中（~140 ns / 200 ns） |
+| **Hsap_WT_S305phos** | 人源 WT, SEP@305 | WT | — | 3 | ✅ 完成（3 × 200 ns） |
+| **Hsap_WT_S305E** | 人源 WT, S305E | WT | — | 3 | 进行中（0 ns / 200 ns） |
 
 *NMR = 裸鼹鼠（*Heterocephalus glaber*）。论文编号使用 NMR 坐标（554 aa）；人源对应 522 aa。*
 

@@ -174,7 +174,8 @@
 | MD 生产 | OpenMM Hsap_WT 200ns × 3 reps | ✅ 完成 |
 | MD 生产 | OpenMM Hgal_WT 200ns × 3 reps | ✅ 完成 |
 | GROMACS 验证 | 旧转换（CMAP bug）Hsap_WT/Hsap_4mut | ✅ 完成，数据不可靠，不纳入分析 |
-| 磷酸化 | S305-phos 体系构建 + EM + 3× replica MD | 🔄 ~138ns/200ns，运行中 |
+| 磷酸化 | S305-phos 3× replica MD | ✅ 200ns/200ns，完成 |
+| 磷酸化 | S305E 体系构建 + 3× replica MD | 🔄 0ns/200ns，运行中 |
 | GROMACS 验证 | GROMACS 2026 native amber19sb.ff | 🔄 ~83ns/200ns，运行中 |
 | Boltz-2 验证 | 全长 + 截断 + 与 AF3 结构对比 | ✅ 完成 |
 

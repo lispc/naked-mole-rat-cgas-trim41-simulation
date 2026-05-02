@@ -75,7 +75,8 @@ All systems use the cGAS C-terminal domain construct (residues 200-554, 355 aa) 
 | **Hsap_4mut** | Human | WT | D431S, K479E, L495Y, K498T | 3 | Completed (3 × 200 ns) |
 | **Hgal_WT** | NMR WT | WT | — | 3 | Completed (3 × 200 ns) |
 | **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 2 | Completed (2 × 200 ns) |
-| **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | In progress (~138 ns / 200 ns) |
+| **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | Completed (3 × 200 ns) |
+| **Hsap_WT_S305E** | Human WT, S305E | WT | — | 3 | In progress (0 ns / 200 ns) |
 
 *NMR = naked mole-rat (*Heterocephalus glaber*). Paper numbering uses NMR coordinates (554 aa); human corresponds to 522 aa.*
 

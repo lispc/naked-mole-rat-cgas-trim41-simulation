@@ -164,9 +164,15 @@ python scripts/minimize_system.py \
 
 **结果**: 能量从 -214,940 → -1,032,741 kJ/mol，下降 ~818,000 kJ/mol。
 
-### 步骤 7：磷酸化模拟突变体 (S305E) — 待做
+### 步骤 7：磷酸化模拟突变体 (S305E) — ✅ 已完成
 
-S305E 无需 leaprc.phosaa19SB，正常 tleap 即可。建议与 S305-phos 并行运行作为电荷对照。
+**构建记录** (2026-05-01):
+- 脚本: `scripts/mutate_s305e.py` + `scripts/build_s305e_system.py`
+- 方法: 基于 Hsap_WT_amber.pdb，手动几何放置 GLU 侧链
+- 体系: `data/md_runs/Hsap_WT_S305E/Hsap_WT_S305E.prmtop/.rst7`
+- 原子数: 同 WT (81,487)，电荷 0.0
+- EM: -517k → -1,319k kJ/mol
+- **3× replica OpenMM NVT production 已启动** (GPU 0/1/2)
 
 ---
 
@@ -303,9 +309,12 @@ system.addForce(restraint_force)
 
 | 任务 | 进度 | ETA |
 |------|------|-----|
-| S305-phos rep1 (CUDA:0) | ~128.6ns / 200ns | ~4h |
-| S305-phos rep2 (CUDA:1) | ~129.4ns / 200ns | ~4h |
-| S305-phos rep3 (CUDA:2) | ~128.4ns / 200ns | ~4h |
+| S305-phos rep1 (CUDA:0) | ✅ 200ns / 200ns | 已完成 |
+| S305-phos rep2 (CUDA:1) | ✅ 200ns / 200ns | 已完成 |
+| S305-phos rep3 (CUDA:2) | ✅ 200ns / 200ns | 已完成 |
+| S305E rep1 (CUDA:0) | 🔄 0ns / 200ns | ~26h |
+| S305E rep2 (CUDA:1) | 🔄 0ns / 200ns | ~26h |
+| S305E rep3 (CUDA:2) | 🔄 0ns / 200ns | ~26h |
 | GROMACS 2026 验证 (CUDA:3) | ~77.2ns / 200ns | ~18h |
 
 ### 待启动
@@ -322,8 +331,8 @@ system.addForce(restraint_force)
 |------|------|------|
 | 准备 | PDB 修改 + tleap 构建 | ✅ 1 天 |
 | 最小化 | OpenMM EM | ✅ 10 分钟 |
-| 生产 | 200ns × 3 reps (S305-phos) | 🔄 ~90% 完成 |
-| 生产 | 200ns × 3 reps (S305E) | 待启动（视 S305-phos 结果决定） |
+| 生产 | 200ns × 3 reps (S305-phos) | ✅ 完成 |
+| 生产 | 200ns × 3 reps (S305E) | 🔄 已启动 |
 | 分析 | MM-GBSA + 构象分析 | 2-3 天 |
 | **总计** | | **~1 周** |
 
