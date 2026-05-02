@@ -91,3 +91,32 @@
 ---
 
 *状态：待完成 | 维护者：Kimi Code CLI*
+
+---
+
+## 2026-05-02: 4mut 机制验证计算实验 Todo
+
+假说：4mut 改变 cGAS 构象/柔性 → 干扰 TRIM41 RING 的 E2~Ub 传递几何 → 降低泛素化效率（binding ≠ function）
+
+### 立即可做（已有数据，几小时内）
+- [ ] **Hsap WT vs 4mut RMSF 差异热图** — 6 reps 数据已齐，定位 4mut 引起的柔性变化区域
+- [ ] **Hsap WT vs 4mut DCCM 差异分析** — 识别变构路径变化
+- [ ] **S305E 完成度检查 + 快速分析** — COM + H-bonds + MM-GBSA（作为阴性对照）
+- [ ] **Hsap 4mut MM-GBSA 正式汇总** — 与 WT 对比，修正 §52 的表述
+
+### 短期可做（1–2 天，需额外计算）
+- [ ] **Hsap 4mut RING-Lys 距离 Umbrella Sampling** — 17 窗口 × 20ns，与 WT US 直接对比 PMF
+- [ ] **三元复合物建模** — AF3/Boltz-2 预测 TRIM41 RING + E2(UbcH5b) + Ub + cGAS(WT/4mut)
+- [ ] **C1 vs C4 构象的催化几何分析** — 用聚类代表帧测量 RING→Lys 距离和角度
+
+### 需等 Hgal NEW 数据（~4–5 天后）
+- [ ] **Hgal WT vs 4mut_rev RMSF 差异**
+- [ ] **Hgal WT vs 4mut_rev RING-Lys PMF**
+- [ ] **跨物种四系统 RMSF/COM/Contacts 全面对比**
+- [ ] **Hgal 4mut_rev MM-GBSA**（若需要）
+
+### 湿实验建议（需合作者）
+- [ ] 体外泛素化 + co-IP
+- [ ] HDX-MS
+- [ ] E3 活性动力学（V_max / K_m）
+- [ ] FRET RING-Lys 距离监测

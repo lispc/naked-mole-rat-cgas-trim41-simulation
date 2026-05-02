@@ -2251,3 +2251,84 @@ CUDA_VISIBLE_DEVICES=3 python scripts/02_md/run_production.py \
 
 *最后更新：2026-05-02（Hgal NEW 系统 MD 启动，auto-launcher 后台运行中）*
 *维护者：Kimi Code CLI*
+
+---
+
+## 四十七、MM-GBSA 结果修正与过度解读纠正（2026-05-02）
+
+### 47.1 此前表述的问题
+
+在 §45.5 和 §46.4 中，对 Hsap_4mut MM-GBSA 结果的解读存在**过度推断**：
+
+> ❌ ~~"ΔΔG = 4.5 kcal/mol 对应亲和力降低约 10³ 倍（K_d 从 ~nM 到 ~μM 级）"~~
+
+### 47.2 正确分析
+
+**统计不显著**：
+
+| 指标 | WT | 4mut | p值 |
+|------|-----|------|-----|
+| ΔG_bind | −19.00 ± 7.52 | −14.55 ± 7.17 | **0.500** |
+
+- t-test p = 0.5，两组无统计学差异
+- 4.5 kcal/mol 的"差异"完全落在方法误差内
+
+**MM-GBSA 精度限制**（文献：Genheden & Ryde, 2015, *J. Chem. Inf. Model.*）：
+- 蛋白-蛋白相互作用的标准差通常为 **47–62 kJ/mol**（~11–14 kcal/mol SE）
+- 对相似亲和力的比较，MM-GBSA "**practically useless**"
+- 我们的 replica SD = 7–12 kcal/mol，与此一致
+
+**绝对值严重高估**：
+- ΔG = −14.55 kcal/mol → K_d ≈ 10⁻¹¹ M（0.02 nM），生物学不合理
+- TRIM 家族 E3-底物亲和力通常为 **μM–nM** 级
+- MD 显示复合物趋向解离，与"femtomolar 结合"矛盾
+- MM-GBSA 绝对值高估约 **6–11 kcal/mol**
+
+**聚类分析矛盾**：
+
+| 分析 | WT | 4mut |
+|------|-----|------|
+| MM-GBSA ΔG | −19.0 | −14.6 |
+| 稳定态占比 (C1+C4) | **33.7%** | **71.8%** |
+
+若 4mut 结合弱 10³ 倍，不应有 2 倍以上的稳定态占比。
+
+### 47.3 正确表述
+
+✅ **"MM-GBSA 显示 4mut 结合能稍弱（−14.6 vs −19.0 kcal/mol），但差异在统计和方法误差范围内（p=0.5）。考虑到 MM-GBSA 对蛋白-蛋白相互作用的典型误差为 several kcal/mol，且绝对值严重高估（真实 K_d 更可能在 μM 级），此 ΔΔG 不宜换算为具体的亲和力倍数。结合聚类分析中 4mut 更集中于稳定态（71.8% vs 33.7%），我们倾向于认为 4mut 并未显著改变物理结合强度，而是通过变构效应影响了泛素化催化效率。"**
+
+### 47.4 实验验证方向
+
+若假说为 **"4mut 改变 cGAS 构象/柔性 → 干扰 TRIM41 RING 的 E2~Ub 传递几何 → 降低泛素化效率"**，建议以下验证实验：
+
+#### 计算层面（现有数据可扩展）
+
+1. **RMSF 差异热图**：WT vs 4mut 的 cGAS 各区域柔性对比
+2. **RING-Lys 距离 PMF**：计算 TRIM41 RING → cGAS-Lys315 (topology resid 334) 的自由能面
+3. **三元复合物建模**：AF3/Boltz-2 预测 TRIM41 RING + E2(UbcH5b) + Ub + cGAS
+4. **DCCM 差异分析**：识别 4mut 引起的变构路径变化
+
+#### 湿实验层面（需合作者执行）
+
+1. **体外泛素化实验（in vitro ubiquitination assay）**
+   - 纯化 TRIM41 + cGAS(WT/4mut) + E2(UbcH5b) + Ub + ATP
+   - Western blot 检测 cGAS ubiquitination 水平
+   - 预期：4mut 泛素化水平低于 WT，但 co-IP 结合可能不变
+
+2. **HDX-MS（氢氘交换质谱）**
+   - 比较 cGAS(WT) vs cGAS(4mut) 的构象动态
+   - 重点看 N-terminal 界面区域（res 211–219）和催化相关 loop
+
+3. **体外 E3 活性动力学**
+   - 固定 TRIM41，梯度增加 cGAS(WT/4mut)
+   - 测定 V_max 和 K_m
+   - 若 K_m 不变但 V_max 降低 → 支持 "binding OK, catalysis impaired"
+
+4. **FRET 实时监测**
+   - 在 TRIM41 RING 和 cGAS Lys315 (topology resid 334) 区域标记荧光探针
+   - 预期：WT RING-Lys 距离分布更窄（催化有利），4mut 更宽（催化不利）
+
+---
+
+*最后更新：2026-05-02（MM-GBSA 过度解读纠正 + 实验验证方向）*
+*维护者：Kimi Code CLI*
