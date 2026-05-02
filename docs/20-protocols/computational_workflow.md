@@ -63,7 +63,7 @@
    - ⚠️ **不要用短于 100 ns 的轨迹算结合能**
 
 3. **结合自由能计算**：
-   - **MM-PBSA**：`gmx_MMPBSA` 或 `Amber MMPBSA.py`
+   - **MM-GBSA**：使用 `MMPBSA.py` (AmberTools)，`igb=5` (GB-OBC II)
    - 更好的选择：**MM-GBSA**（对界面极性残基更敏感，计算更快）
    - 做 **能量分解**（per-residue），看 4 个突变位点各自贡献
    - ΔΔG_bind = G_bind(突变体) - G_bind(WT)
@@ -120,7 +120,7 @@
    ├─> 对比不同初始构象的收敛行为
    └─> 若4mut导致界面loop更flexible → 结合可能不稳定
 
-6. 结合能计算（MM-PBSA/GBSA）
+6. 结合能计算（MM-GBSA）
    └─> 至少3个独立重复，统计显著性
 
 7. 对照实验
@@ -157,7 +157,7 @@
 | 结构预测 | AlphaFold3 + Boltz-2 交叉验证 | 低 ipTM 时界面不可靠，需交叉验证 |
 | MD 力场 | Amber ff19SB + OPC / CHARMM36m | |
 | MD 时长 | ≥ 500 ns（结合能计算） |
-| 结合能方法 | MM-GBSA（快）+ MM-PBSA（交叉验证） |
+| 结合能方法 | MM-GBSA（`igb=5`, GB-OBC II） |
 | 快速突变扫描 | FoldX / Rosetta ddG |
 | 高精度 ΔΔG | FEP+（仅结构可靠时） |
 

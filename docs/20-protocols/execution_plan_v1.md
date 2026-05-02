@@ -176,7 +176,7 @@ Week 5: 对照验证 + 论文图表 + 文档撰写
 
 ### 阶段 4：结合能计算与分析（Day 28-35）
 
-#### 4.1 MM-GBSA / MM-PBSA
+#### 4.1 MM-GBSA
 - 工具：`MMPBSA.py` (AmberTools) 或 `gmx_MMPBSA`（若用 GROMACS，但我们用 OpenMM，因此使用 AmberTools）
 - 方法：
   - 从每轨迹抽取 5000-10000 帧（每隔 20-40 ps）

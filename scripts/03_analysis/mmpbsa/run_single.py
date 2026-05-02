@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run MM-GBSA / MM-PBSA on MD trajectory using MMPBSA.py (AmberTools).
+Run MM-GBSA on MD trajectory using MMPBSA.py (AmberTools).
 
 Usage:
   python scripts/run_mmpbsa.py \
@@ -194,7 +194,7 @@ def run_mmpbsa(topology, trajectory, receptor_mask, ligand_mask,
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run MM-GBSA/PBSA on MD trajectory")
+    parser = argparse.ArgumentParser(description="Run MM-GBSA on MD trajectory")
     parser.add_argument("--topology", required=True, help="Amber prmtop file")
     parser.add_argument("--trajectory", required=True, help="MD trajectory (DCD)")
     parser.add_argument("--receptor-mask", required=True, 

@@ -1697,7 +1697,7 @@ dcd_freq = int(1000.0 / 0.002)   # 500,000 steps = 1 ns ✅
 
 | 脚本 | 功能 | 依赖 |
 |------|------|------|
-| `scripts/run_mmpbsa.py` | MM-GBSA / MM-PBSA 结合能计算 + 残基分解 | AmberTools MMPBSA.py |
+| `scripts/run_mmpbsa.py` | MM-GBSA 结合能计算 + 残基分解 | AmberTools MMPBSA.py |
 | `scripts/run_pca.py` | 主成分分析（PCA），输出 variance 图、projections 图、PC mode PDBs | MDAnalysis, numpy |
 | `scripts/run_dccm.py` | 动态互相关矩阵（DCCM），输出热图、高相关残基对 | MDAnalysis, numpy |
 
