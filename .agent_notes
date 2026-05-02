@@ -1,0 +1,5 @@
+
+[2026-05-02] USER PREFERENCE: Always run MM-GBSA in parallel.
+- Each replica in independent workdir
+- OMP_NUM_THREADS=4 per job
+- Never serial execution.
