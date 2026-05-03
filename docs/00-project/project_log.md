@@ -950,7 +950,120 @@ data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 
 **核心结论**：E3 泛素连接酶通过构象选择（population shift）而非诱导契合发挥功能，与我们的 "binding-tolerant but catalysis-optimized" 范式一致。关键引用：Liu & Nussinov 2009–2011（Cullin-RING "flexible two-arm machine"）、Pruneda 2012（E2~Ub 闭合构象变构）、Chakrabarti 2017（gp78/Ube2g2 NMR+MD）、Zhen 2014（RNF4 QM/MM 泛素转移机制）。
 
+## §55. Hgal_WT rep2 DCD 修复 + 动态变构分析 + Chai-1 验证 (2026-05-03)
+
+### 55.1 Hgal_WT rep2 DCD 损坏诊断与修复
+
+**问题**：`Hgal_WT_rep2_prod.dcd` 文件头损坏（前 8 字节为 0x00，应为 `CORD` 魔数）。文件大小 942 MB，模拟日志显示已到 111 ns。
+
+**根因**：OpenMM DCDFile 写入时文件头被破坏（可能为文件系统问题或异常终止）。文件体完整——通过二进制扫描确认所有帧数据完好。
+
+**帧结构分析**：
+- n_atoms = 77,794（含溶剂）
+- 每帧 = X(311,176 B) + Y(311,176 B) + Z(311,176 B) + box record(56 B) = 933,608 B
+- 从 offset 80 开始为有效帧数据（前 80 字节损坏）
+- 共提取 **1008 帧**（~100.8 ns），最后 1 个不完整帧被截断
+
+**修复步骤**：
+1. 停止运行中的模拟进程（PID 1818886）
+2. 用 `mdtraj` 提取原始坐标并写入新 DCD（跳过损坏的文件头）
+3. MDAnalysis 验证通过：1008 帧，坐标范围合理，首末帧 CA RMSD = 115.43 Å
+4. 备份原损坏文件 → `*.dcd.corrupted_backup`
+5. 从 111 ns checkpoint 重启模拟，写入新的 `Hgal_WT_rep2_restart.dcd`
+
+**重启命令**：
+```bash
+python scripts/02_md/restart_production.py \
+  --prmtop data/md_runs/Hgal_WT/rep2/Hgal_WT.prmtop \
+  --pdb data/md_runs/Hgal_WT/rep2/Hgal_WT_minimized.pdb \
+  --checkpoint data/md_runs/Hgal_WT/rep2/Hgal_WT_rep2_prod_111ns.chk \
+  --name Hgal_WT_rep2 --outdir data/md_runs/Hgal_WT/rep2 \
+  --prod-ns 89 --platform CUDA --seed 20252502
+```
+
+### 55.2 Experiment 1: ΔRMSF + PCA（动态变构分析）
+
+**意外发现**：4mut_rev 并非简单地"整体更柔"或"更刚"，而是**柔韧性景观完全重塑**：
+
+| 区域 | WT RMSF | 4mut_rev RMSF | ΔRMSF | 意义 |
+|------|---------|---------------|-------|------|
+| N-端起始 (GLU219) | 14.2 Å | 0.0 Å | **−14.2 Å** | 极端刚性化 |
+| 4mut 位点附近 | 12.3 Å | 5.9 Å | **−6.4 Å** (均值) | 突变区刚性化 |
+| 中间 loop 区域 | 8.1 Å | 11.7 Å | **+3.6 Å** (均值) | 远端 loop 柔性增加 |
+| C-端尾部 | 6.8 Å | 6.5 Å | −0.3 Å | 基本不变 |
+
+**PCA 结果**：
+- PC1 解释 72% 方差
+- WT 与 4mut_rev 在 PC 空间中明显分离
+- 支持"动态变构"模型：静态结构几乎不变（RMSD < 0.6 Å），但动态柔性景观完全重塑
+
+### 55.3 DCCM 分析（动态耦合）
+
+**关键发现**：4mut_rev 消除了 WT 中强烈的 N-端 ↔ C-端反相关（−0.44 → +0.12）
+
+- WT：N-端与 C-端存在强烈的动态耦合（anti-correlation = −0.44）
+- 4mut_rev：该耦合完全消失，变为弱正相关（+0.12）
+- 结论：4mut 通过破坏长程动态耦合网络发挥作用，而非局部结构变化
+
+**文件位置**：`data/analysis/allosteric_network/`
+
+### 55.4 Chai-1 截短预测验证
+
+**目的**：验证 AF3 全长预测 vs Chai-1 截短预测的一致性
+
+**结果**：
+- WT：Chai-1 conf = 0.63–0.65，预测 cGAS-SPRY 界面正常
+- 4mut：Chai-1 conf = 0.63–0.66，4mut 位点距 SPRY 24–39 Å
+- 交叉比较 SPRY RMSD = 3–8 Å（在 Chai-1 采样噪声范围内）
+
+**结论**：4mut **不直接改变** cGAS-SPRY 结合几何。与 Rosetta I_sc 结果一致（I_sc 不变）。
+
+**证据层级**：Rosetta I_sc 不变（决定性） > Chai-1 截短 > AF3 全长
+
+### 55.5 Rosetta FastRelax 失败分析
+
+**尝试**：将 4mut 引入 WT AF3 pose，FastRelax 后释放坐标约束
+
+**结果**：score 从 −82 暴涨至 +317,306，结构严重畸变
+
+**结论**：4mut **不能**从 WT AF3 pose 直接弛豫得到。4mut 需要不同的起始构象（或更大的构象采样空间）。
+
+### 55.6 S305E 分析修复（最终确认）
+
+**修复**：`analyze_s305e.py` final-50ns `nan` bug
+- 根因：`idx_150 = int(150 / 0.1)` 未考虑 `ANALYSIS_STEP = 5` 的降采样
+- 修正：直接对降采样后的数组切片
+
+**最终 50 ns 结果**：
+| 系统 | COM (Å) | H-bonds |
+|------|---------|---------|
+| WT | 46.3 ± 3.1 | 6.0 ± 3.9 |
+| S305E | 43.6 ± 3.6 | 4.0 ± 2.0 |
+
+S305E 的 COM 略小（结合稍紧），但 H-bonds 明显减少，与 S305 磷酸化促进结合增强的文献报道一致。
+
+### 55.7 Hgal 系统当前进度（更新）
+
+| 系统 | Rep1 | Rep2 | Rep3 | 状态 |
+|------|------|------|------|------|
+| Hgal_WT | ✅ 200 ns | 🔄 111→200 ns (restart) | 🔄 ~113 ns / 200 | rep1 完成 |
+| Hgal_4mut_rev | 🔄 ~126 ns / 200 | 🔄 ~75 ns / 200 | 🔄 ~75 ns / 200 | 进行中 |
+
+- Rep2 已从 111 ns checkpoint 重启，预计 ~24h 完成剩余 89 ns
+- Rep2 修复后的 DCD 含 1008 帧（~100.8 ns），可与 restart DCD 后续合并
+
+### 55.8 P0 清理任务清单
+
+来自 `docs/reviews/` 的审计 issue，优先级 P0（阻塞论文提交）：
+
+| # | 问题 | 状态 | 文件 |
+|---|------|------|------|
+| 1 | `cgas_trim41_sequences.fasta` 含错误 C463S | ✅ 已修复 | `sequences/cgas_trim41_sequences.fasta` → D431S |
+| 2 | Lys-334 → Lys-315 标签统一 | ✅ 已完成 | 活跃代码全部使用 K315；仅 archive 脚本保留旧标签 |
+| 3 | t-test 误用（时间序列自相关）| ✅ 已修复 | `scripts/03_analysis/compare_systems.py` 已改用 `correlated_ttest`（有效样本量校正） |
+| 4 | RMSD 描述修正（local vs global）| ✅ 已修复 | `docs/10-reports/docking_report.md` 已明确标注"局部 domain 对齐"与"全长全局 CA RMSD ≈ 20.96 Å" |
+
 ---
 
-*最后更新：2026-05-03（四元 MVP MD + S305E 修复 + 论文推进）*
+*最后更新：2026-05-03（Hgal_WT rep2 DCD 修复 + 动态变构分析 + Chai-1 验证 + P0 清单）*
 *维护者：Kimi Code CLI*

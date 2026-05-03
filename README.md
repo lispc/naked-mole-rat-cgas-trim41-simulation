@@ -14,8 +14,7 @@
 │
 ├── sequences/             # FASTA files for structure prediction
 │   ├── Hsap_cGAS_WT.fasta
-│   ├── Hsap_cGAS_4mut.fasta          # ⚠️ OLD incorrect (C463S), see docs/00-project/4mut_correction_log.md
-│   ├── Hsap_cGAS_4mut_corrected.fasta # ✅ Correct: D431S, K479E, L495Y, K498T
+│   ├── Hsap_cGAS_4mut.fasta           # ✅ Correct: D431S, K479E, L495Y, K498T
 │   ├── Hgal_cGAS_WT.fasta
 │   ├── Hgal_cGAS_4mut_rev.fasta
 │   └── TRIM41_WT.fasta
@@ -81,9 +80,9 @@ All binary systems use the cGAS C-terminal domain construct in complex with TRIM
 *NMR = naked mole-rat (*Heterocephalus glaber*).*
 
 **⚠️ Known Issues:**
-- `Hgal_WT_rep2_prod.dcd` is corrupted (zero magic bytes)
+- ~~`Hgal_WT_rep2_prod.dcd` is corrupted (zero magic bytes)~~ ✅ **FIXED** (2026-05-03): Repaired via binary frame extraction + mdtraj rewrite; simulation restarted from 111 ns checkpoint
 - Hsap systems originally used incorrect residue C463S; corrected to D431S in later analyses. See [`docs/00-project/4mut_correction_log.md`](docs/00-project/4mut_correction_log.md)
-- All "Lys-334" references in US code/docs should read **"Lys-315"** (prmtop renumbering artifact). See [`docs/reviews/0427-response.md`](docs/reviews/0427-response.md)
+- ~~All "Lys-334" references in US code/docs should read **"Lys-315"** (prmtop renumbering artifact)~~ ✅ **FIXED**: Active codebase (build/analysis scripts) all use K315; only archived deprecated scripts retain old label. See [`docs/reviews/0427-response.md`](docs/reviews/0427-response.md)
 
 ---
 

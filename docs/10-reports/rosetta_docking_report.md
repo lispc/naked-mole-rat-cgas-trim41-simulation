@@ -9,7 +9,7 @@ Rosetta `docking_protocol` (2026.15) was used to perform protein-protein docking
 | **Hgal** | **-23.02 REU** | **2.10 Å** | 0.385 | 1 | ✅ Matches LightDock |
 | **Human WT** | **-22.15 REU** | **2.12 Å** | **0.893** | **3** | ✅ Matches AF3 prediction |
 
-**Key finding**: Both systems show nearly identical interface energies (-23 vs -22 REU), suggesting the 4 Hgal mutations (C463S, K479E, L495Y, K498T) do not dramatically alter the binding affinity as scored by Rosetta. However, the **Human WT decoys converge much tighter** (mean RMSD 2.4Å vs 4.8Å, Fnat 0.89 vs 0.39), indicating a more well-defined binding interface in the human structure.
+**Key finding**: Both systems show nearly identical interface energies (-23 vs -22 REU), suggesting the mutations (human: D431S/K479E/L495Y/K498T; Hgal: S463C/E511K/Y527L/T530K) do not dramatically alter the binding affinity as scored by Rosetta. However, the **Human WT decoys converge much tighter** (mean RMSD 2.4Å vs 4.8Å, Fnat 0.89 vs 0.39), indicating a more well-defined binding interface in the human structure.
 
 ---
 

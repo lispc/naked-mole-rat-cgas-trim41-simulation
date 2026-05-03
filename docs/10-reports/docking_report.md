@@ -318,7 +318,7 @@ lightdock3.py setup.json 200 -c 1 -s fastdfire
 ### 10.3.4 AF3 突变序列验证 — 重大发现（2026-04-23）
 
 为验证"突变驱动几何改变"假说，我们重新向 AF3 提交了正确的突变序列单体：
-- **Hsap_cGAS_4mut**：人类 cGAS + C463S, K479E, L495Y, K498T
+- **Hsap_cGAS_4mut**：人类 cGAS + D431S, K479E, L495Y, K498T
 - **Hgal_cGAS_4mut_rev**：裸鼹鼠 cGAS + S463C, E511K, Y527L, T530K（反向突变）
 
 **结果**：
