@@ -1,6 +1,6 @@
 # cGAS-TRIM41 Molecular Dynamics Study
 
-> Computational investigation of how four amino acid variants in naked mole-rat (*Heterocephalus glaber*) cGAS affect TRIM41-mediated ubiquitination.
+> Computational investigation of how four amino acid variants affect cGAS-TRIM41 interaction and TRIM41-mediated ubiquitination.
 >
 > Based on: *A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging* (Chen et al., Science 2025)
 
@@ -14,7 +14,8 @@
 │
 ├── sequences/             # FASTA files for structure prediction
 │   ├── Hsap_cGAS_WT.fasta
-│   ├── Hsap_cGAS_4mut.fasta
+│   ├── Hsap_cGAS_4mut.fasta          # ⚠️ OLD incorrect (C463S), see docs/00-project/4mut_correction_log.md
+│   ├── Hsap_cGAS_4mut_corrected.fasta # ✅ Correct: D431S, K479E, L495Y, K498T
 │   ├── Hgal_cGAS_WT.fasta
 │   ├── Hgal_cGAS_4mut_rev.fasta
 │   └── TRIM41_WT.fasta
@@ -33,9 +34,7 @@
 │   │   ├── Hsap_4mut/
 │   │   ├── Hgal_WT/
 │   │   ├── Hgal_4mut_rev/
-│   │   └── Hsap_WT_S305phos/
-│   ├── md_runs_gmx/       # GROMACS MD trajectories (legacy conversion)
-│   ├── md_runs_gmx2026/   # GROMACS 2026 native force field validation
+│   │   └── Hsap_WT_S305E/
 │   └── analysis/          # Analysis outputs (JSON, PNG, NPZ)
 │
 ├── figures/               # Publication-ready figures
@@ -55,106 +54,102 @@
 | Document | Content |
 |----------|---------|
 | [`docs/00-project/project_log.md`](docs/00-project/project_log.md) | **Primary log**: Current status, timeline, and decisions |
-| [`docs/10-reports/docking_report.md`](docs/10-reports/docking_report.md) | Protein-protein docking: ClusPro, SDOCK2.0, LightDock, Rosetta |
-| [`docs/10-reports/af3_report.md`](docs/10-reports/af3_report.md) | AlphaFold3 structure prediction: ipTM/pTM, mutation mapping |
+| [`docs/10-reports/allosteric_mechanism_analysis.md`](docs/10-reports/allosteric_mechanism_analysis.md) | **Latest**: Chai-1 vs AF3 allostery + three-mechanism analysis |
+| [`docs/10-reports/af3_mutation_analysis.md`](docs/10-reports/af3_mutation_analysis.md) | AF3 structure prediction: 4mut does NOT change active-site geometry |
 | [`docs/10-reports/interface_analysis_report.md`](docs/10-reports/interface_analysis_report.md) | Interface analysis and allosteric mechanism evidence |
+| [`docs/10-reports/rosetta_mutational_scan_report.md`](docs/10-reports/rosetta_mutational_scan_report.md) | Rosetta scan: I_sc unchanged, allosteric effect confirmed |
+| [`docs/10-reports/docking_report.md`](docs/10-reports/docking_report.md) | Protein-protein docking: ClusPro, SDOCK2.0, LightDock, Rosetta |
 | [`docs/20-protocols/phosphorylation_md_plan.md`](docs/20-protocols/phosphorylation_md_plan.md) | Phosphorylation MD protocol and running records |
-| [`docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md`](docs/30-diagnostics/gromacs_openmm_divergence_diagnosis.md) | GROMACS vs OpenMM divergence: CMAP fix, PBC pitfalls |
-| [`docs/50-infra/hardware_benchmark.md`](docs/50-infra/hardware_benchmark.md) | Hardware benchmarks and MD performance (~152 ns/day) |
-| [`docs/50-infra/software_versions.md`](docs/50-infra/software_versions.md) | Software version lockfile |
+| [`docs/30-diagnostics/md_realism_gap.md`](docs/30-diagnostics/md_realism_gap.md) | Gap analysis: simulation vs experimental realism |
+| [`docs/50-infra/hardware_benchmark.md`](docs/50-infra/hardware_benchmark.md) | Hardware benchmarks and MD performance |
 
 See [`docs/README.md`](docs/README.md) for the full index.
 
 ## Simulated Systems
 
-All systems use the cGAS C-terminal domain construct (residues 200-554, 355 aa) in complex with TRIM41 SPRY, prepared with ff19SB + OPC water model.
+All binary systems use the cGAS C-terminal domain construct in complex with TRIM41 SPRY, prepared with ff19SB + OPC water model.
 
 | System | cGAS | TRIM41 | Mutations | Replicas | Status |
 |--------|------|--------|-----------|----------|--------|
 | **Hsap_WT** | Human WT | WT | — | 3 | Completed (3 × 200 ns) |
 | **Hsap_4mut** | Human | WT | D431S, K479E, L495Y, K498T | 3 | Completed (3 × 200 ns) |
-| **Hgal_WT** | NMR WT | WT | — | 3 | In progress (~183 / 200 ns rep1) |
-| **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 3 | In progress (~84 / 200 ns rep1) |
-| **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | Completed (3 × 200 ns) |
+| **Hgal_WT** | NMR WT | WT | — | 3 | Completed (rep1 ~104 ns, rep2/rep3 ~96 ns) |
+| **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 3 | Completed (rep1 ~104 ns, rep2/rep3 ~61 ns) |
 | **Hsap_WT_S305E** | Human WT, S305E | WT | — | 3 | Completed (3 × 200 ns) |
-| **Quaternary MVP (WT)** | Human WT + TRIM25 RING proxy | UBE2D1~Ub | — | 1 | In progress (0.8 / 50 ns) |
-| **Quaternary MVP (4mut)** | Human 4mut + TRIM25 RING proxy | UBE2D1~Ub | D431S, K479E, L495Y, K498T | 1 | In progress (0.3 / 50 ns) |
+| **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | Completed (3 × 200 ns) |
 
-*NMR = naked mole-rat (*Heterocephalus glaber*). Paper numbering uses NMR coordinates (554 aa); human corresponds to 522 aa.*
+*NMR = naked mole-rat (*Heterocephalus glaber*).*
 
-**Cross-engine validation:**
-- GROMACS 2026 native `amber19sb.ff` + OPC: Hsap_WT rep1, ~83 ns / 200 ns (ongoing). CMAP fix validated: COM/Rg match OpenMM within 1%, RMSD ratio 1.34×.
+**⚠️ Known Issues:**
+- `Hgal_WT_rep2_prod.dcd` is corrupted (zero magic bytes)
+- Hsap systems originally used incorrect residue C463S; corrected to D431S in later analyses. See [`docs/00-project/4mut_correction_log.md`](docs/00-project/4mut_correction_log.md)
+- All "Lys-334" references in US code/docs should read **"Lys-315"** (prmtop renumbering artifact). See [`docs/reviews/0427-response.md`](docs/reviews/0427-response.md)
 
-**Boltz-2 validation:**
-- Local Boltz-2 (v2.2.1) installed in `boltz` conda environment. Full-length cGAS-TRIM41: ipTM 0.17 (identical to AF3). Domain-truncated: ipTM 0.33, but TRIM41 placement qualitatively differs from AF3 (RMSD 21.34 Å, Jaccard 0.00). Confirms docking+MD approach is correct for this transient complex.
+---
 
-## Key Findings
+## Key Findings (Updated 2026-04-23)
 
 ### 1. Mutations are NOT at the physical interface
 
-The four mutation sites (residues 463, 511, 527, 530 in NMR numbering) are **>200 residues away** in sequence from the interface region (residues 228-266) and **30-39 Å away** in 3D space. They cannot directly contact TRIM41.
+The four mutation sites are **>20 Å away** from the cGAS-SPRY interface in all prediction methods (Rosetta, Chai-1, AF3). They cannot directly contact TRIM41.
 
-| Mutation | NMR Resid | Distance to nearest interface residue | Distance to TRIM41 |
-|----------|-----------|--------------------------------------|-------------------|
-| S463 | 482 | 32 residues | ~29 Å |
-| E511 | 530 | 80 residues | ~31 Å |
-| Y527 | 546 | 96 residues | ~31 Å |
-| T530 | 549 | 99 residues | ~39 Å |
+| Evidence | Distance to SPRY | Interpretation |
+|----------|-----------------|----------------|
+| Rosetta I_sc | I_sc unchanged (1e-12 level) | No direct physical contact |
+| Chai-1 truncated | 24–39 Å | Far from interface |
+| AF3 full-length | ~7 Å (but see caveat below) | May be full-length conformational artifact |
 
-### 2. Interface is at the cGAS N-terminus
+**Caveat**: AF3 full-length places D431/L495 ~7 Å from SPRY, but Chai-1 truncated (same sequence, no NTD) places them at 24–32 Å. The AF3 "short-range" positioning may be an NTD-constraint artifact. Chai-1 is more consistent with Rosetta energy evidence.
 
-The physical binding interface involves cGAS residues **228-266** and TRIM41 residues **82-190**:
-- TRIM41-157/158 ↔ cGAS-258/259 (occupancy >60%, most stable)
-- TRIM41-187 ↔ cGAS-236 (occupancy ~39%)
+### 2. The allosteric mechanism is DYNAMIC, not structural
 
-### 3. Human systems are more dynamic than naked mole-rat
+**Static structure analyses** (AF3 monomer, Chai-1, Rosetta scan) show:
+- 4mut site RMSD < 0.6 Å (local structure unchanged)
+- DNA-binding groove SASA unchanged (Δ = 0%)
+- Catalytic site Rg unchanged (Δ < 0.1 Å)
+
+**Dynamic analyses** from MD trajectories show:
+- **DCCM**: WT shows anti-correlated motion between N-terminal (305-307) and C-terminal 4mut region (474-478, corr ≈ −0.44); 4mut_rev **eliminates** this anti-correlation
+- **ΔRMSF**: Hgal 4mut_rev makes the N-terminal region significantly more flexible (80% of residues with |ΔRMSF| > 0.5 Å) and the C-terminal region more rigid (mean ΔRMSF = −6.4 Å)
+- **PCA**: PC1 captures 72% of variance; WT and 4mut_rev occupy distinct conformational subspaces
+
+**Conclusion**: 4mut acts as a **dynamic allosteric switch**—it does not change what cGAS looks like (static structure), but it changes how cGAS moves (dynamic coupling network).
+
+### 3. Species differences are LARGE
 
 | Metric | Hgal_WT | Hsap_WT | Hsap_4mut |
 |--------|---------|---------|-----------|
-| RMSD | 5.16 ± 0.72 Å | **8.94 ± 1.58 Å** | **9.76 ± 2.21 Å** |
-| COM | 37.4 ± 0.9 Å | **46.6 ± 2.4 Å** | **49.0 ± 2.8 Å** |
+| Global RMSD (species) | — | 20.9 Å vs Hgal | — |
+| Interface location | N-terminal (203-249) | Mid-domain (288-315) | — |
 
-The 4mut makes the human complex **even less stable** (RMSD +9%, COM +5%, p < 1e-30).
+**Hgal and Hsap cGAS have fundamentally different folds.** Hgal MD results cannot be directly extrapolated to Hsap.
 
-### 4. Active site geometry diverges between species
+### 4. S305 phosphorylation causes complex dissociation (unexpected)
 
-| Site | Hgal_WT | Hgal_4mut_rev | Hsap_WT | Hsap_4mut |
-|------|---------|---------------|---------|-----------|
-| S463/D431 | 29.4 Å | **18.6 Å** (−10.8) | 29.4 Å | 32.0 Å (+2.6) |
-| E511/K479 | 31.5 Å | **21.9 Å** (−9.7) | 36.6 Å | 40.0 Å (+3.4) |
+S305-phos (SEP, −2 charge) causes **complete dissociation** in <100 ns. S305E (−1 charge, Glu) causes **weakened binding** (COM −3.7 Å, H-bonds −2.0) but **not dissociation**.
 
-**Hgal_4mut_rev** brings active sites **closer** to TRIM41; **Hsap_4mut** pushes them **farther**.
+This contradicts Zhen et al. (2023), who reported phosphorylation **promotes** binding. Possible explanation: charge density matters (−2 phosphate vs −1 Glu).
 
-### 5. Lys-334 is the top ubiquitination candidate in human cGAS
-
-Lysine accessibility analysis reveals **Lys-334** as the closest cGAS lysine to the TRIM41 RING domain:
-- Hsap WT: 10.4 Å
-- Hsap 4mut: **6.4 Å** (−4.0 Å)
-
-The 4mut may **concentrate** ubiquitination to this single site.
-
-### 6. S305 phosphorylation causes complex dissociation (unexpected)
-
-Preliminary analysis of S305-phos (~138 ns) shows **dissociation** in all three replicas:
-
-| System | COM (Å) | Rg (Å) | Behavior |
-|--------|---------|--------|----------|
-| WT (reference) | 45.1 ± 3.2 | 31.1 ± 1.3 | Stable bound |
-| S305-phos rep1 | **67.6 ± 1.4** | 38.9 ± 0.6 | Dissociating |
-| S305-phos rep2 | **89.8 ± 10.0** | 48.4 ± 4.3 | Fully dissociated |
-| S305-phos rep3 | **71.3 ± 3.4** | 40.2 ± 1.4 | Dissociating |
-
-> Note: The 3 replicas are at ~140 ns / 200 ns as of 2026-04-23.
-
-This contradicts Zhen et al. (2023), who reported that CHK2 phosphorylation at S305 **promotes** cGAS-TRIM41 binding. Possible explanations: (1) force field overestimation of −2 charge repulsion in solution, (2) nuclear/DNA environment required for stabilization, (3) dissociation is an intermediate state prior to DNA-mediated recruitment.
-
-### Allosteric mechanism hypothesis
-
-Since the mutations are far from the interface, their effect must be **allosteric**:
+### 5. Revised mechanism hypothesis
 
 ```
-C-terminal 4mut  →  altered global dynamics  →  changed RING-to-Lys geometry  →  differential ubiquitination
+C-terminal 4mut
+    ↓  Local structure unchanged (<0.6 Å)
+Dynamic coupling network重塑
+    ↓  DCCM anti-correlation eliminated; RMSF pattern changed
+N-terminal conformational sampling altered
+    ↓  Interface dynamics changed
+TRIM41 recognition / ubiquitination efficiency altered
 ```
+
+**Evidence strength**:
+- ⭐⭐⭐⭐⭐ Rosetta I_sc unchanged (no direct contact)
+- ⭐⭐⭐⭐⭐ AF3 N-terminal 12 Å displacement (long-range structural effect)
+- ⭐⭐⭐⭐ Chai-1 WT vs 4mut interface difference marginal (binding mode unchanged)
+- ⭐⭐⭐ DCCM anti-correlation change (dynamic coupling altered)
+- ⭐⭐⭐ ΔRMSF / PCA (conformational subspace separation)
+
+---
 
 ## Quick Start
 
@@ -192,7 +187,7 @@ CUDA_VISIBLE_DEVICES=0 python scripts/run_md.py \
     --platform CUDA
 ```
 
-**Multi-GPU replicas:** Use `CUDA_VISIBLE_DEVICES` to isolate GPUs. The script hardcodes `CudaDeviceIndex='0'`.
+**Multi-GPU replicas:** Use `CUDA_VISIBLE_DEVICES` to isolate GPUs.
 
 ### Analyze a Single System
 
@@ -203,8 +198,7 @@ python scripts/analyze_system.py \
     --prmtop data/md_runs/Hsap_WT/Hsap_WT.prmtop \
     --trajectories data/md_runs/Hsap_WT/rep1/*.dcd \
     --replica-names rep1 \
-    --cgas-range 219 573 \
-    --active-sites '{"D431": 450, "K479": 498, "L495": 514, "K498": 517}' \
+    --cgas-range 219 541 \
     --dt-ns 0.1 \
     --outdir data/analysis/my_run
 ```
@@ -220,6 +214,8 @@ python scripts/compare_systems.py \
     --outdir data/analysis/comparison
 ```
 
+---
+
 ## Environment
 
 ### Conda Environments
@@ -229,7 +225,7 @@ python scripts/compare_systems.py \
 | `cgas-md` | OpenMM MD, AmberTools, analysis | OpenMM 8.5.1, AmberTools 24.8, MDAnalysis 2.10.0, NumPy 2.4.3, SciPy 1.17.1, Matplotlib 3.10.8 |
 | `gmx` | GROMACS 2026.0 CUDA | GROMACS 2026.0 (nompi_cuda) |
 | `rosetta` | PyRosetta docking | PyRosetta 2025.06 |
-| `boltz` | **Boltz-2 structure prediction** | **Boltz-2.2.1, PyTorch 2.11.0, CUDA 13** |
+| `boltz` | Boltz-2 structure prediction | Boltz-2.2.1, PyTorch 2.11.0, CUDA 13 |
 
 **Always use conda environments. Do not use the system Python.**
 
