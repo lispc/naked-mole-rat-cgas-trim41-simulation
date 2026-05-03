@@ -261,10 +261,13 @@ def plot_comparison(wt, mutant, outdir):
     print(f"\n{'='*60}")
     print("FINAL 50ns AVERAGE (150-200ns)")
     print(f"{'='*60}")
-    idx_150 = int(150 / 0.1)
+    # Use downsampled time array to find correct index for 150 ns
+    idx_150 = np.searchsorted(time, 150.0)
 
     def fmt_final(data_list):
         arr = np.concatenate([d[idx_150:] for d in data_list])
+        if len(arr) == 0:
+            return "nan ± nan"
         return f"{np.mean(arr):.1f} ± {np.std(arr):.1f}"
 
     print(f"{'COM (Å)':<25} {fmt_final(wt['com']):<25} {fmt_final(mutant['com']):<25}")
