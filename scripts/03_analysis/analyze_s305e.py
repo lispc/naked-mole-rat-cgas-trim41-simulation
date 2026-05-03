@@ -20,6 +20,9 @@ OUTDIR = BASE / "data/analysis/s305e_vs_wt"
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
 
+# Downsample trajectories for speed (every Nth frame)
+ANALYSIS_STEP = 5
+
 def analyze_system(name, prmtop, dcd_paths, dt_ns=0.1):
     print(f"\n{'='*60}")
     print(f"Analyzing: {name}")
@@ -38,8 +41,8 @@ def analyze_system(name, prmtop, dcd_paths, dt_ns=0.1):
     for rep_idx, dcd in enumerate(dcd_paths):
         print(f"\n  Replica {rep_idx+1}: {dcd}")
         u = mda.Universe(str(prmtop), str(dcd))
-        n_frames = len(u.trajectory)
-        time_ns = np.arange(n_frames) * dt_ns
+        n_frames = len(u.trajectory[::ANALYSIS_STEP])
+        time_ns = np.arange(n_frames) * dt_ns * ANALYSIS_STEP
         if results['time_ns'] is None:
             results['time_ns'] = time_ns
 
@@ -66,14 +69,16 @@ def analyze_system(name, prmtop, dcd_paths, dt_ns=0.1):
 
         # H-bond analysis (frame by frame to avoid memory issues)
         print("    Computing H-bonds...")
-        hb.run(verbose=False)
+        hb.run(step=ANALYSIS_STEP, verbose=False)
         n_hb_per_frame = np.zeros(n_frames, dtype=int)
-        for frame_idx, _ in hb.results.hbonds:
-            n_hb_per_frame[int(frame_idx)] += 1
+        for row in hb.results.hbonds:
+            frame_idx = int(row[0]) // ANALYSIS_STEP
+            if frame_idx < n_frames:
+                n_hb_per_frame[frame_idx] += 1
         # H-bonds already counted both directions by between parameter
 
         print("    Computing COM/Rg/RMSD...")
-        for ts in u.trajectory:
+        for ts in u.trajectory[::ANALYSIS_STEP]:
             com_cgas = cgas.center_of_mass()
             com_trim = trim.center_of_mass()
             com_dist = np.linalg.norm(com_cgas - com_trim)
@@ -85,7 +90,7 @@ def analyze_system(name, prmtop, dcd_paths, dt_ns=0.1):
             r = rms.rmsd(protein_ca.positions, ref_protein_ca.positions, superposition=False)
             rmsd_rep.append(r)
 
-            hb_rep.append(n_hb_per_frame[ts.frame])
+            hb_rep.append(n_hb_per_frame[ts.frame // ANALYSIS_STEP])
 
         results['com'].append(np.array(com_rep))
         results['hbonds'].append(np.array(hb_rep))

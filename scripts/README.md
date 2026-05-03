@@ -100,6 +100,17 @@ python scripts/03_analysis/mmpbsa/run_batch.py --help
 | `compare_predictions.py` | Compare Boltz-2 vs AF3 structures |
 | `calc_distances.py` | Calculate CA-CA distances between active residues |
 
+### Quaternary MVP Scripts
+
+Located in `scripts/02_md/` and `scripts/03_analysis/`:
+
+| Script | Purpose |
+|--------|---------|
+| `build_quaternary_mvp.py` | Assemble E2~Ub-TRIM41-cGAS four-component complex from PDB templates |
+| `minimize_quaternary_mvp.py` | OpenMM energy minimization (5,000 steps, CUDA) |
+| `run_quaternary_mvp.py` | Production MD runner (50 ns test, NVT→NPT, DCD output) |
+| `analyze_quaternary_mvp.py` | Analyze K315→Ub distance, E2~Ub closed fraction, interface contacts |
+
 ### `archive/` — Archived Scripts
 
 Not for routine use. Kept for reproducibility and reference.

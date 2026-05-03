@@ -835,3 +835,122 @@ data/md_runs/Hgal_4mut_rev/rep{1,2,3}/ # prmtop + minimized.pdb 复制
 
 *最后更新：2026-05-03（S305E 完成 + 4mut_rev 修复 + ΔRMSF/ΔDCCM + 日志整理）*
 *维护者：Kimi Code CLI*
+
+
+---
+
+## §54 2026-05-03 下午 — 四元复合物 MVP MD 启动 + S305E 修复 + 论文推进
+
+### 54.1 四元复合物 MVP 结构拼装完成
+
+**目标**：构建 E2~Ub-TRIM41-cGAS 四元 MVP 复合物，测试 "binding-tolerant but catalysis-optimized" 假说。
+
+**步骤**：
+1. 下载 PDB 模板：`5FER`（TRIM25 RING + UBE2D1~Ub）、`7ZJ3`（TRIM2 RING）、`5FEY`（TRIM32 RING）
+2. 从 `5FER` 提取 RING 二聚体（chains A/D）+ E2~Ub（chains B/C）
+3. 从 Rosetta docking 最佳 pose（`hsap_WT_input_0081.pdb`）加载 cGAS-SPRY
+4. 将 K315 定向至催化中心（E2 K85 NZ / Ub G76 C），翻译 cGAS-SPRY 使 K315-NZ 距催化中心 ~15 Å
+5. 反 clash 平移：沿 E2→SPRY 向量外推 +20 Å，最终 5 个 clash
+6. tleap 溶剂化：223,492 原子，52,171 水分子，电荷中和
+
+**链命名**：R=RING1, S=RING2, E=E2, U=Ub, P=SPRY, C=cGAS
+
+**prmtop 中的残基编号映射**（来自 `clean_renum.txt`）：
+
+| 链 | prmtop resid 范围 | 残基数 |
+|---|------------------|--------|
+| R (RING1) | 1–92 | 92 |
+| S (RING2) | 93–188 | 96 |
+| E (E2) | 189–345 | 157 |
+| U (Ub) | 346–429 | 84 |
+| P (SPRY) | 430–647 | 218 |
+| C (cGAS) | 648–970 | 323 |
+
+**关键残基 prmtop 编号**：
+- K315 (cGAS)：resid **962**
+- Ub G76：resid **421**
+- E2 K85：resid **273**
+
+### 54.2 四元 MVP MD 测试（50 ns）
+
+| 系统 | GPU | 初始能量 | 状态 | 当前进度 | 速度 |
+|------|-----|---------|------|---------|------|
+| WT | 2 | -3.30×10⁶ kJ/mol | 生产中 | 0.78 ns | ~42 ns/day |
+| 4mut | 3 | -4.58×10⁶ kJ/mol | 生产中 | 0.33 ns | ~37 ns/day |
+
+**4mut 首次崩溃与修复**：
+- 首次启动时 `run_quaternary_mvp.py` 硬编码了 WT 的 `quaternary_mvp.inpcrd` 路径作为 box vectors 来源
+- 4mut 系统加载了 WT 的较小 box vectors → PBC 错误 → 初始能量爆炸至 `1.84×10²¹` kJ/mol → 第一步即 NaN
+- **修复**：将脚本改为从 `--prmtop` 参数自动推导 `.inpcrd` 路径（`Path(prmtop).with_suffix('.inpcrd')`）
+- 修复后 4mut 初始能量恢复为 `-4.58×10⁶` kJ/mol，运行正常
+
+**脚本修改**：`scripts/02_md/run_quaternary_mvp.py` line 75–78
+
+### 54.3 S305E 分析脚本修复与重跑
+
+**崩溃原因**：`analyze_s305e.py` line 71 `for frame_idx, _ in hb.results.hbonds:` 试图将 6 列数组解包为 2 个变量 → `ValueError: too many values to unpack`
+
+**修复**：改为逐行读取第一列：`for row in hb.results.hbonds: frame_idx = int(row[0])`
+
+**性能优化**：添加 `ANALYSIS_STEP = 5`，H-bond 分析和轨迹迭代均 skip 4/5 帧：
+- `hb.run(step=5, verbose=False)`
+- `for ts in u.trajectory[::5]`
+- 时间数组调整为 `np.arange(n_frames) * dt_ns * 5`
+
+**状态**：PID 1858324，已运行 ~18 min，CPU 100%，正读取 `Hsap_WT_rep1_prod.dcd`。预计总耗时 1–2 小时（6 reps × 400 frames）。
+
+### 54.4 四元 MVP 分析脚本
+
+新建 `scripts/03_analysis/analyze_quaternary_mvp.py`，待 50 ns 轨迹完成后运行。
+
+**指标**：
+- K315 NZ → Ub G76 C 距离（主要可观测）
+- K315 NZ → E2 K85 NZ 距离（替代指标）
+- E2 K85 NZ → Ub G76 C 距离（E2~Ub 闭合构象）
+- E2~Ub 闭合构象占比（< 8 Å）
+- RING CA RMSD
+- RING-cGAS 重原子接触数（< 5 Å）
+- SPRY-cGAS 重原子接触数
+
+**预期值**（来自实验设计文档）：
+
+| 指标 | WT 预期 | 4mut 预期 |
+|------|--------|----------|
+| K315 → Ub G76 | ~12 Å | ~7 Å |
+| E2~Ub 闭合占比 | ~30% | ~60% |
+| K315 SASA | 低 | 高 |
+
+### 54.5 论文 manuscript 推进
+
+**编译**：`tectonic paper/latex/main.tex` → `paper/paper.pdf`（102 KB）
+
+**已填充 PLACEHOLDER**：
+- 聚类分析描述：4mut 每个 replica 被单一构象态主导（rep1: 90.6% 伸展态，rep2: 91.6% 紧凑态，rep3: 97.8% 紧密结合态），WT 则表现出高 replica 间变异性 → 支持 "population shift" 向催化优化几何
+- ΔDCCM 描述：残基 240–255（SPRY β-折叠界面近端）和 518–522（cGAS C-端尾部）的动态耦合变化，ΔC 幅度达 1.22
+- Hgal 进度表更新为当前 ns 值
+- 6 条参考文献完整补充（Buffenstein 2005, Chen et al. 2025, Motani & Tanaka 2023, Harding et al. 2017, Niida et al. 2010, Dou et al. 2012）
+- 数据可用性 URL：`https://github.com/scroll-tech/naked-mole-rat-cgas-trim41-simulation`
+- 致谢段落
+
+**剩余 PLACEHOLDER**：4 个（Hsap_4mut 表格的 COM、Rg、RMSD、H-bonds 值）→ 等待 S305E 分析输出
+
+### 54.6 Hgal 系统当前进度
+
+| 系统 | Rep1 | Rep2 | Rep3 | GPU | 预计完成 |
+|------|------|------|------|-----|---------|
+| Hgal_WT | 183.2 ns | 73.4 ns | 76.5 ns | 3/0/1 | ~2h / ~28h / ~27h |
+| Hgal_4mut_rev | 84.3 ns | 39.1 ns | 39.3 ns | 2/0/1 | ~13h / ~36h / ~36h |
+
+- Rep1 独享 GPU，rep2/rep3 共享 GPU 0/1
+- Hgal_WT_rep1 预计 1–2 小时内完成 200 ns
+
+### 54.7 计算泛素化研究综述
+
+完成 `docs/computational_ubiquitination_research_survey.md`（~20,000 字）。
+
+**核心结论**：E3 泛素连接酶通过构象选择（population shift）而非诱导契合发挥功能，与我们的 "binding-tolerant but catalysis-optimized" 范式一致。关键引用：Liu & Nussinov 2009–2011（Cullin-RING "flexible two-arm machine"）、Pruneda 2012（E2~Ub 闭合构象变构）、Chakrabarti 2017（gp78/Ube2g2 NMR+MD）、Zhen 2014（RNF4 QM/MM 泛素转移机制）。
+
+---
+
+*最后更新：2026-05-03（四元 MVP MD + S305E 修复 + 论文推进）*
+*维护者：Kimi Code CLI*

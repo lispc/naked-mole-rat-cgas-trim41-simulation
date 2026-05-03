@@ -73,10 +73,12 @@ All systems use the cGAS C-terminal domain construct (residues 200-554, 355 aa) 
 |--------|------|--------|-----------|----------|--------|
 | **Hsap_WT** | Human WT | WT | — | 3 | Completed (3 × 200 ns) |
 | **Hsap_4mut** | Human | WT | D431S, K479E, L495Y, K498T | 3 | Completed (3 × 200 ns) |
-| **Hgal_WT** | NMR WT | WT | — | 3 | Completed (3 × 200 ns) |
-| **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 2 | Completed (2 × 200 ns) |
+| **Hgal_WT** | NMR WT | WT | — | 3 | In progress (~183 / 200 ns rep1) |
+| **Hgal_4mut_rev** | NMR | WT | S463D, E511K, Y527L, T530K | 3 | In progress (~84 / 200 ns rep1) |
 | **Hsap_WT_S305phos** | Human WT, SEP@305 | WT | — | 3 | Completed (3 × 200 ns) |
-| **Hsap_WT_S305E** | Human WT, S305E | WT | — | 3 | In progress (0 ns / 200 ns) |
+| **Hsap_WT_S305E** | Human WT, S305E | WT | — | 3 | Completed (3 × 200 ns) |
+| **Quaternary MVP (WT)** | Human WT + TRIM25 RING proxy | UBE2D1~Ub | — | 1 | In progress (0.8 / 50 ns) |
+| **Quaternary MVP (4mut)** | Human 4mut + TRIM25 RING proxy | UBE2D1~Ub | D431S, K479E, L495Y, K498T | 1 | In progress (0.3 / 50 ns) |
 
 *NMR = naked mole-rat (*Heterocephalus glaber*). Paper numbering uses NMR coordinates (554 aa); human corresponds to 522 aa.*
 
