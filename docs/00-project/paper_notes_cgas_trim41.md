@@ -1,5 +1,11 @@
 # 论文 cGAS-TRIM41 相关部分理解笔记
 
+> ⚠️ **历史文档警告**：此文档写于项目早期（2026-04-22）。其中部分信息已过时：
+> - 突变位点最初标记为 C463S/K479E/L495Y/K498T，**后修正为 D431S/K479E/L495Y/K498T**
+> - 残基编号体系（裸鼹鼠 554aa vs 人 522aa）的映射见 `4mut_correction_log.md`
+> - 核心发现已纳入 `10-reports/interface_analysis_report.md` 和 `10-reports/corrected_4mut_analysis.md`
+> - 本文档仅保留作为早期理解过程的记录，**不应作为数据引用来源**
+
 > 来源：*A cGAS-mediated mechanism in naked mole-rats potentiates DNA repair and delays aging*
 > Yu Chen et al., Science 390, eadp5056 (2025)
 > DOI: 10.1126/science.adp5056

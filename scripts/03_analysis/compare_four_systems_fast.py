@@ -17,8 +17,9 @@ import json
 import warnings
 warnings.filterwarnings("ignore")
 
-BASE = Path("/home/scroll/personal/naked-mole-rat-cgas-trim41-simulation")
-OUTDIR = BASE / "data/analysis/four_system"
+# Ensure scripts/lib/ is importable from any working directory
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from lib.paths import BASE, FOUR_SYSTEM_DIR as OUTDIR  # noqa: E402
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
 SYSTEMS = {

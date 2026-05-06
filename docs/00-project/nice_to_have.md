@@ -204,3 +204,38 @@ rosetta_scripts.default.macosclangrelease \
 
 **核心原则**：
 > "以最少的工作量讲清楚科学问题。Hgal 的 18Å vs 28Å 几何差异已经足够有力。"
+
+---
+
+## 补充：来自 good_ideas_backlog 的计算与实验想法
+
+> 以下内容合并自 `docs/00-project/good_ideas_backlog.md`（已删除），保留仍有价值的部分。
+
+### 计算类
+
+| # | 想法 | 方法 | 优先级 |
+|---|------|------|--------|
+| 8 | Rosetta ΔΔG 精确计算 | `cartesian_ddg` 或 `ddg_monomer` | P2 |
+| 9 | Rosetta Per-Residue Energy Decomposition | WT vs 4mut 复合物能量分解 | P2 |
+| 10 | Markov State Model (MSM) | pyEMMA，需 500ns+ 轨迹 | P3 |
+| 11 | AlloSigMA / gRINN 变构网络分析 | 专门变构检测工具 | P3 |
+| 12 | 增强采样（Metadynamics / Umbrella Sampling） | OpenMM + PLUMED | P2 |
+| 13 | 变构效应路径动画 | PyMOL / VMD，WT → 4mut 形变 | P4 |
+
+### 湿实验建议（需合作者）
+
+| # | 实验 | 目的 |
+|---|------|------|
+| 14 | K414R 定点突变 | 验证 Lys-414 是 TRIM41 泛素化位点 |
+| 15 | 嵌合体实验（修正后 D431S 位点） | 测试长 loop 对紧凑几何的贡献 |
+| 16 | 体外泛素化 + co-IP | 区分"结合不变但催化改变" |
+| 17 | HDX-MS | WT vs 4mut 构象动态对比 |
+| 18 | E3 活性动力学 (V_max/K_m) | 定量比较催化效率 |
+| 19 | FRET RING-Lys 距离监测 | 实时监测催化几何 |
+
+### 文献调研待完成
+
+| # | 问题 |
+|---|------|
+| 20 | TRIM41 coiled-coil 域是否参与 cGAS 识别？ |
+| 21 | cGAS 全部已知泛素化位点列表（UniProt Q8N884 + PhosphoSitePlus） |
