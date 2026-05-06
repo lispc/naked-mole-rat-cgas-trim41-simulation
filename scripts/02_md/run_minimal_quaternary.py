@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-Minimize + production MD for minimal quaternary (E2~Ub + cGAS).
+Minimize + production MD for quaternary v2: RING-E2~Ub + cGAS.
 
-The prmtop has all protein residues in a single chain. Residue ranges:
-  E2 (UBE2D1): residues 1-145
-  Ub: residues 146-221 (76 residues)
-  cGAS: residues 222-544 (323 residues, starts with ASP200)
+Topology (all protein in one chain after tleap):
+  RING1:    residues 0-78    (~79 aa, 5FER chain A)
+  RING2:    residues 79-158  (~80 aa, 5FER chain D)
+  E2:       residues 159-303 (~145 aa, 5FER chain B)
+  Ub:       residues 304-379 (~76 aa, 5FER chain C)
+  cGAS:     residues 380-702 (~323 aa)
 
-A COM distance flat-bottom restraint keeps E2~Ub and cGAS from drifting
-too far apart while allowing K315 to sample distances to Ub-G76.
+Key restraints:
+  - Isopeptide bond: E2 K85 NZ ↔ Ub G76 C (harmonic, k=500, r0=1.5 Å)
+  - COM flat-bottom: RING+E2+Ub ↔ cGAS (30-60 Å)
 """
 import sys
 import argparse
@@ -31,27 +34,92 @@ def log(msg, logfile=None):
 
 
 def make_integrator():
-    return mm.LangevinMiddleIntegrator(
-        300 * unit.kelvin, 1.0 / unit.picosecond, 2.0 * unit.femtoseconds)
+    return mm.LangevinMiddleIntegrator(300 * unit.kelvin, 1.0 / unit.picosecond, 2.0 * unit.femtoseconds)
 
 
-def build_simulation(topology, system, platform, properties):
-    """Create a fresh Simulation with a new integrator."""
-    return app.Simulation(topology, system, make_integrator(), platform, properties)
+def build_sim(topology, system, platform, props):
+    return app.Simulation(topology, system, make_integrator(), platform, props)
 
 
-def get_protein_residues(topology):
-    """Return protein residues (excluding water/ions)."""
-    return [r for r in topology.residues() if r.name not in ('HOH', 'WAT', 'Na+', 'Cl-', 'NA', 'CL')]
+def find_key_atoms(topology):
+    """Find key atoms by scanning protein residues.
 
+    Returns dict with atom indices for Ub G76 C, E2 K85 NZ, cGAS K315 NZ,
+    cGAS start residue index, and atom ranges for COM restraint.
+    """
+    protein = [r for r in topology.residues()
+               if r.name not in ('HOH', 'WAT', 'Na+', 'Cl-', 'NA', 'CL')]
 
-def get_atom_range(topology, residues, start_res, end_res):
-    """Get atom indices for residue range [start_res, end_res)."""
-    indices = []
-    for r in residues[start_res:end_res]:
-        for atom in r.atoms():
-            indices.append(atom.index)
-    return indices
+    # Find cGAS start: ASP after the last GLY of Ub
+    # Pattern: ... GLY(Ub76) → ASP(cGAS200)
+    cgas_start = None
+    ub_g76_c = None
+    for i in range(len(protein) - 1):
+        if protein[i].name == 'GLY' and protein[i + 1].name == 'ASP':
+            # Verify: ASP's id contains '200'
+            if '200' in str(protein[i + 1].id) or '385' in str(protein[i + 1].id):
+                cgas_start = i + 1
+                # Ub G76 C
+                for a in protein[i].atoms():
+                    if a.name == 'C':
+                        ub_g76_c = a.index
+                break
+
+    if cgas_start is None:
+        # Fallback: use known indices
+        cgas_start = 384
+        ub_g76_c = 5964
+
+    # E2 K85: LYS near position 247 in protein list
+    e2_k85_nz = None
+    for i in range(240, 260):
+        if i >= len(protein):
+            break
+        r = protein[i]
+        if r.name == 'LYS' and 'NZ' in [a.name for a in r.atoms()]:
+            # First LYS after position 240 in E2 region
+            for a in r.atoms():
+                if a.name == 'NZ':
+                    e2_k85_nz = a.index
+                    break
+            break
+
+    # cGAS K315: offset 315-200=115 from cGAS start
+    cgas_k315_nz = None
+    k315_idx = cgas_start + 115  # ~499
+    for offset in range(-5, 6):
+        i = k315_idx + offset
+        if 0 <= i < len(protein):
+            r = protein[i]
+            if r.name == 'LYS' and 'NZ' in [a.name for a in r.atoms()]:
+                for a in r.atoms():
+                    if a.name == 'NZ':
+                        cgas_k315_nz = a.index
+                        break
+                break
+
+    # Atom ranges for COM restraint
+    ring_e2_ub_atoms = []
+    cgas_atoms = []
+    for atom in topology.atoms():
+        # Find which protein residue this atom belongs to
+        for i, r in enumerate(protein):
+            if atom.residue is r:
+                if i < cgas_start:
+                    ring_e2_ub_atoms.append(atom.index)
+                else:
+                    cgas_atoms.append(atom.index)
+                break
+
+    return {
+        'ub_g76_c': ub_g76_c,
+        'e2_k85_nz': e2_k85_nz,
+        'cgas_k315_nz': cgas_k315_nz,
+        'cgas_start': cgas_start,
+        'ring_e2_ub_atoms': ring_e2_ub_atoms,
+        'cgas_atoms': cgas_atoms,
+        'n_protein': len(protein),
+    }
 
 
 def main():
@@ -69,39 +137,23 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     logfile = outdir / f"{args.name}.log"
 
-    log(f"=== Minimal Quaternary MD: {args.name} ===", logfile)
+    log(f"=== Quaternary v2 MD: {args.name} ===", logfile)
+    log(f"Production: {args.prod_ns} ns, GPU: {args.gpu}", logfile)
 
-    # Load
-    log("Loading prmtop/inpcrd...", logfile)
+    # ---- Load ----
+    log("Loading system...", logfile)
     prmtop = app.AmberPrmtopFile(args.prmtop)
     inpcrd = app.AmberInpcrdFile(args.inpcrd)
     topology = prmtop.topology
 
-    # Find protein residues and component ranges
-    protein_res = get_protein_residues(topology)
-    log(f"Protein residues: {len(protein_res)}", logfile)
+    # Find key atoms
+    ka = find_key_atoms(topology)
+    log(f"Protein residues: {ka['n_protein']}, cGAS start: {ka['cgas_start']}", logfile)
+    log(f"Ub G76 C: {ka['ub_g76_c']}, E2 K85 NZ: {ka['e2_k85_nz']}, K315 NZ: {ka['cgas_k315_nz']}", logfile)
+    log(f"RING+E2+Ub atoms: {len(ka['ring_e2_ub_atoms'])}, cGAS atoms: {len(ka['cgas_atoms'])}", logfile)
 
-    # E2: ~145 residues, Ub: ~76, cGAS: ~323. Total = 544
-    # Verify by checking Ub G76 and cGAS start
-    ub_start = 145
-    cgas_start = 221
-    log(f"E2: [0-{ub_start}), Ub: [{ub_start}-{cgas_start}), cGAS: [{cgas_start}-{len(protein_res)})", logfile)
-
-    e2ub_atoms = get_atom_range(topology, protein_res, 0, cgas_start)
-    cgas_atoms = get_atom_range(topology, protein_res, cgas_start, len(protein_res))
-    log(f"E2+Ub atoms: {len(e2ub_atoms)}, cGAS atoms: {len(cgas_atoms)}", logfile)
-
-    # Find cGAS K315 NZ atom for analysis
-    k315_nz_idx = None
-    for r in protein_res[cgas_start:]:
-        if r.name == 'LYS' and '315' in str(r.id):
-            for atom in r.atoms():
-                if atom.name == 'NZ':
-                    k315_nz_idx = atom.index
-                    break
-            break
-    if k315_nz_idx is not None:
-        log(f"cGAS K315 NZ atom index: {k315_nz_idx}", logfile)
+    assert ka['ub_g76_c'] is not None, "Ub G76 C not found!"
+    assert ka['e2_k85_nz'] is not None, "E2 K85 NZ not found!"
 
     # ---- Build system ----
     log("Building system...", logfile)
@@ -111,49 +163,54 @@ def main():
         constraints=app.HBonds,
     )
 
-    # Flat-bottom COM distance restraint (30-60 Å, k=50 kJ/mol/nm²)
-    restraint = mm.CustomCentroidBondForce(2,
-        "0.5*k*max(0,distance(g1,g2)-upper)^2 + 0.5*k*max(0,lower-distance(g1,g2))^2")
-    restraint.addGlobalParameter("k", 50 * unit.kilojoules_per_mole / unit.nanometer**2)
-    restraint.addGlobalParameter("lower", 30 * unit.angstrom)
-    restraint.addGlobalParameter("upper", 60 * unit.angstrom)
+    # Isopeptide bond restraint: E2 K85 NZ ↔ Ub G76 C
+    # Harmonic, r0=1.5 Å (amide C-N bond), k=500 kJ/mol/nm²
+    iso_force = mm.CustomBondForce("0.5*k_iso*(r-r0)^2")
+    iso_force.addGlobalParameter("k_iso", 5000 * unit.kilojoules_per_mole / unit.nanometer**2)
+    iso_force.addGlobalParameter("r0", 0.135 * unit.nanometer)  # 1.35 Å (amide C-N bond)
+    iso_force.addBond(ka['e2_k85_nz'], ka['ub_g76_c'], [])
+    system.addForce(iso_force)
+    log(f"Isopeptide restraint: K85 NZ ↔ G76 C, r0=1.35 Å, k=5000", logfile)
 
-    masses = [system.getParticleMass(i).value_in_unit(unit.amu) for i in range(system.getNumParticles())]
-    g1 = restraint.addGroup(e2ub_atoms, [masses[i] for i in e2ub_atoms])
-    g2 = restraint.addGroup(cgas_atoms, [masses[i] for i in cgas_atoms])
-    restraint.addBond([g1, g2], [])
-    system.addForce(restraint)
-    log("Added COM flat-bottom restraint: 30-60 Å", logfile)
+    # COM flat-bottom restraint
+    masses = [system.getParticleMass(i).value_in_unit(unit.amu)
+              for i in range(system.getNumParticles())]
+    com_force = mm.CustomCentroidBondForce(2,
+        "0.5*k_com*max(0,distance(g1,g2)-upper)^2 + 0.5*k_com*max(0,lower-distance(g1,g2))^2")
+    com_force.addGlobalParameter("k_com", 50 * unit.kilojoules_per_mole / unit.nanometer**2)
+    com_force.addGlobalParameter("lower", 30 * unit.angstrom)
+    com_force.addGlobalParameter("upper", 60 * unit.angstrom)
+    g1 = com_force.addGroup(ka['ring_e2_ub_atoms'], [masses[i] for i in ka['ring_e2_ub_atoms']])
+    g2 = com_force.addGroup(ka['cgas_atoms'], [masses[i] for i in ka['cgas_atoms']])
+    com_force.addBond([g1, g2], [])
+    system.addForce(com_force)
+    log("COM flat-bottom restraint: 30-60 Å", logfile)
 
     platform = mm.Platform.getPlatformByName('CUDA')
-    properties = {'CudaDeviceIndex': args.gpu, 'Precision': 'mixed'}
+    props = {'CudaDeviceIndex': args.gpu, 'Precision': 'mixed'}
 
     # ---- Minimization with backbone restraints ----
-    log("Phase 1: Minimization with backbone restraints...", logfile)
+    log("Phase 1: Minimization with BB restraints...", logfile)
 
-    # Add backbone position restraints
     bb_force = mm.CustomExternalForce("0.5*k_bb*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
     bb_force.addGlobalParameter("k_bb", 100 * unit.kilojoules_per_mole / unit.nanometer**2)
     bb_force.addPerParticleParameter("x0")
     bb_force.addPerParticleParameter("y0")
     bb_force.addPerParticleParameter("z0")
 
-    bb_indices = []
-    for atom in topology.atoms():
-        if atom.name in ('CA', 'C', 'N'):
-            bb_indices.append(atom.index)
+    bb_indices = [a.index for a in topology.atoms() if a.name in ('CA', 'C', 'N')]
 
-    sim = build_simulation(topology, system, platform, properties)
+    sim = build_sim(topology, system, platform, props)
     sim.context.setPositions(inpcrd.positions)
     sim.context.setVelocitiesToTemperature(300 * unit.kelvin, args.seed)
 
-    initial_pos = sim.context.getState(getPositions=True).getPositions()
+    init_pos = sim.context.getState(getPositions=True).getPositions()
     for idx in bb_indices:
-        pos = initial_pos[idx]
+        pos = init_pos[idx]
         bb_force.addParticle(idx, [pos[0], pos[1], pos[2]])
-    bb_force_idx = system.addForce(bb_force)
+    bb_idx = system.addForce(bb_force)
 
-    sim = build_simulation(topology, system, platform, properties)
+    sim = build_sim(topology, system, platform, props)
     sim.context.setPositions(inpcrd.positions)
 
     e0 = sim.context.getState(getEnergy=True).getPotentialEnergy()
@@ -161,48 +218,49 @@ def main():
 
     sim.minimizeEnergy(maxIterations=5000)
     e1 = sim.context.getState(getEnergy=True).getPotentialEnergy()
-    log(f"  After minimization: {e1}", logfile)
-    log(f"  Delta: {e1 - e0}", logfile)
+    log(f"  After min: {e1}  Δ={e1-e0}", logfile)
 
-    # Remove backbone restraints
-    system.removeForce(bb_force_idx)
-    log("  Removed backbone restraints", logfile)
+    system.removeForce(bb_idx)
+    log("  Removed BB restraints", logfile)
 
-    # Save minimized structure
+    # Save minimized
     min_pos = sim.context.getState(getPositions=True).getPositions()
     pdb_path = outdir / f"{args.name}_minimized.pdb"
     with open(pdb_path, 'w') as f:
         app.PDBFile.writeFile(topology, min_pos, f)
     log(f"  Saved: {pdb_path}", logfile)
 
+    # Check isopeptide distance after minimization
+    iso_dist = np.linalg.norm(min_pos[ka['e2_k85_nz']].value_in_unit(unit.angstrom)
+                              - min_pos[ka['ub_g76_c']].value_in_unit(unit.angstrom))
+    log(f"  Isopeptide distance after min: {iso_dist:.2f} Å", logfile)
+
     # ---- Production ----
     log(f"Phase 2: Production ({args.prod_ns} ns)...", logfile)
 
-    sim = build_simulation(topology, system, platform, properties)
+    sim = build_sim(topology, system, platform, props)
     sim.context.setPositions(min_pos)
     sim.context.setVelocitiesToTemperature(300 * unit.kelvin, args.seed)
 
-    # Reporters
     dcd_path = outdir / f"{args.name}.dcd"
     sim.reporters.append(app.DCDReporter(str(dcd_path), 1000))
 
     state_path = outdir / f"{args.name}_state.log"
     sim.reporters.append(app.StateDataReporter(
         str(state_path), 10000,
-        step=True, time=True, potentialEnergy=True, temperature=True,
-        speed=True,
+        step=True, time=True, potentialEnergy=True, temperature=True, speed=True,
     ))
 
     n_steps = int(args.prod_ns * 1e6 / 2.0)
-    chunk_steps = int(10e6 / 2.0)  # ~10 ns chunks
+    chunk = int(10e6 / 2.0)
 
-    for chunk_start in range(0, n_steps, chunk_steps):
-        steps = min(chunk_steps, n_steps - chunk_start)
+    for start in range(0, n_steps, chunk):
+        steps = min(chunk, n_steps - start)
         sim.step(steps)
-        ns_done = (chunk_start + steps) * 2.0 / 1e6
+        ns_done = (start + steps) * 2.0 / 1e6
         chk = outdir / f"{args.name}_{ns_done:.0f}ns.chk"
         sim.saveCheckpoint(str(chk))
-        log(f"  {ns_done:.0f} ns checkpoint saved", logfile)
+        log(f"  {ns_done:.0f} ns checkpoint", logfile)
 
     log(f"Production complete: {args.prod_ns} ns", logfile)
 
