@@ -1280,5 +1280,86 @@ data/analysis/four_system/
 
 ---
 
-*最后更新：2026-05-05（四系统 MD 对比完成）*
-*维护者：Kimi Code CLI*
+## §58. 四系统分析刷新 + 最小四元复合物构建 (2026-05-06)
+
+### 58.1 四系统对比分析刷新
+
+使用最新的完整轨迹重新运行 `compare_four_systems_fast.py`，产出更新后的图表和数据：
+
+**最终定量结果**（`data/analysis/four_system/`）：
+
+| 指标 | Hgal_WT | Hgal_4mut_rev | Hsap_WT | Hsap_4mut |
+|------|---------|---------------|---------|-----------|
+| 帧数 | 5,898 | 6,001 | 6,000 | 6,000 |
+| COM distance (Å) | **38.55 ± 2.83** | **49.35 ± 2.51** | 42.82 ± 2.61 | 41.75 ± 4.18 |
+| CA-CA contacts (<8Å) | **33.1 ± 10.4** | **18.7 ± 7.4** | 148.4 ± 10.2 | 148.2 ± 7.8 |
+| Total Rg (Å) | **27.97 ± 0.99** | **31.79 ± 1.05** | 30.62 ± 1.19 | 30.20 ± 1.75 |
+| cGAS Rg (Å) | 20.01 | 20.33 | 21.43 | 21.75 |
+| TRIM41 Rg (Å) | 21.23 | 21.60 | 23.38 | 23.03 |
+| RMSD (Å) | 19.92 ± 6.71 | 24.09 ± 12.69 | 22.23 ± 7.36 | 19.87 ± 8.02 |
+
+**跨物种突变效应**：
+
+| Δ指标 | Hgal (4mut_rev − WT) | Hsap (4mut − WT) |
+|-------|----------------------|-------------------|
+| ΔCOM distance | **+10.80 Å** | −1.08 Å |
+| ΔCA-CA contacts | **−14.4** | −0.2 |
+| ΔTotal Rg | **+3.82 Å** | −0.43 Å |
+
+**核心结论**：
+1. Hgal 4mut_rev 显著破坏 cGAS-TRIM41 界面（COM +10.8Å, contacts −44%）
+2. Hsap 4mut 对整体结合几何几乎无影响（所有 Δ < 2 Å）
+3. Hgal WT 本身比 Hsap WT 更紧凑（COM 38.6 vs 42.8 Å），但界面 contacts 少得多（33 vs 148）——提示两种物种的界面几何定性不同
+
+**数据可用性问题**：
+- Hgal_WT rep2 有 ~10ns 数据缺失（原始 DCD 损坏修复中丢失了 101-111ns，从 111ns checkpoint 重启）
+- Hgal_4mut_rev rep2 从 76ns checkpoint 重启，数据完整
+
+### 58.2 最小四元复合物 (E2~Ub + cGAS) 构建
+
+**目的**：直接测试 4mut 是否改变 cGAS K315 到 E2~Ub 催化中心 (Ub-G76) 的可及性。
+
+**设计策略**：
+- E2~Ub 来自 PDB 5FER（UBE2D1~Ub isopeptide mimic，高分辨率晶体结构）
+- cGAS 来自 AF3 单体预测（高置信度，pLDDT 0.87-0.94）
+- WT 和 4mut 使用相同的 cGAS 骨架起点（AF3 WT），4mut 仅突变 4 个位点的侧链（D431S/K479E/L495Y/K498T）
+- cGAS K315 NZ 定位在 Ub-G76 C 的 15 Å 处
+- COM 距离 flat-bottom restraint（30-60 Å, k=50 kJ/mol/nm²）防止模块飞离
+
+**构建流程**：
+1. `scripts/mutate_4mut_cgas.py` — 从 WT cGAS PDB 突变侧链（修复了 PDB 列对齐 bug）
+2. `scripts/build_minimal_quaternary.py` — 定位 cGAS 相对 E2~Ub + clash 消除
+3. `pdb4amber --reduce` → `tleap` (ff19SB + OPC, solvateOct 10.0)
+4. `scripts/02_md/run_minimal_quaternary.py` — EM + 50ns NVT production
+
+**当前运行状态**：
+
+| 实验 | GPU | 状态 | ETA |
+|------|-----|------|-----|
+| quaternary_WT_rep1 | 0 | 🔄 生产中 (50ns) | ~6-8h |
+| quaternary_4mut_rep1 | 1 | 🔄 生产中 (50ns) | ~6-8h |
+
+**分析指标**（待 MD 完成后）：
+- K315 NZ → Ub-G76 C 距离时间序列（主要指标）
+- K315 侧链 SASA
+- E2~Ub closed/open 构象比例
+- cGAS RMSD/RMSF
+
+**文件位置**：
+- 构建脚本：`scripts/build_minimal_quaternary.py`, `scripts/mutate_4mut_cgas.py`
+- MD 脚本：`scripts/02_md/run_minimal_quaternary.py`
+- 体系：`data/structures/quaternary_minimal/`
+- 轨迹：`data/md_runs/quaternary_minimal/`
+
+### 58.3 已知局限
+
+1. **无 TRIM41 SPRY/RING**：仅包含 E2~Ub + cGAS，缺少 TRIM41 支架提供的空间约束
+2. **COM 约束是人为的**：真实生物学中 TRIM41 CC 域维持 RING-SPRY 的距离
+3. **单 replica**：每个系统只有 1 个 50ns replica，统计力弱
+4. **50ns 短**：可能不足以观察 K315 趋近 Ub-G76 的显著构象变化
+5. **突变位点远离 K315**：4 个突变在 C-端 (431-498)，K315 在序列中间，50ns 内突变效应可能不显著
+
+---
+
+*最后更新：2026-05-06（四系统分析刷新 + 最小四元复合物构建与 MD 启动）*
+*维护者：Claude Code CLI*
