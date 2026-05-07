@@ -1,6 +1,16 @@
 # 文档索引
 
-> 最后更新：2026-05-06
+> 最后更新：2026-05-08
+
+---
+
+## 最终产出
+
+| 文件 | 内容 |
+|------|------|
+| 📄 **[`../paper/paper_final.md`](../paper/paper_final.md)** | **论文终稿**——核心结论与支撑逻辑。4mut 通过长程变构机制使 K315 自由能面向催化中心偏移 −2.5 Å |
+| 📋 **[`00-project/lab_report.md`](00-project/lab_report.md)** | **实验报告**——忠实记录项目全过程，包括决策因果、失败尝试、bug 清单和资源分配反思 |
+| 📝 **[`00-project/retrospective.md`](00-project/retrospective.md)** | **项目回顾**——得失总结、关键转折点、经验教训 |
 
 ---
 
@@ -37,6 +47,7 @@
 | 文件 | 内容 |
 |------|------|
 | [`computational_ubiquitination_research_survey.md`](15-literature/computational_ubiquitination_research_survey.md) | E3 泛素化计算方法综述（~20,000 字） |
+| [`人cGAS泛素化位点.md`](15-literature/人cGAS泛素化位点.md) | 人源 cGAS 泛素化位点全景报告（K347=TRIM41 靶点来源） |
 
 ## 20-protocols — 方案与执行计划
 
