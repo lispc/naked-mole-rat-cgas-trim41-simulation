@@ -193,9 +193,12 @@ def phase2_umbrella(args):
 
     sys, top, prmtop_obj = build_system(args.prmtop)
 
-    # Load window starting position
-    start_pdb = app.PDBFile(f"{args.outdir}/{args.name.replace(f'_win{args.window:02d}', '')}_window_{args.window:02d}A.pdb")
-    start_pos = start_pdb.positions
+    # Load window starting position from DCD-like PDB or from trajectory
+    if args.window_pdb:
+        start_pdb = app.PDBFile(args.window_pdb)
+        start_pos = start_pdb.positions
+    else:
+        raise ValueError("--window-pdb required for phase 2")
 
     target_nm = args.target / 10.0
 
@@ -242,6 +245,7 @@ def main():
     p.add_argument('--phase', type=int, required=True, choices=[1, 2])
     p.add_argument('--window', type=int, default=0, help='Window number (phase 2)')
     p.add_argument('--target', type=float, default=0, help='Target distance in Å (phase 2)')
+    p.add_argument('--window-pdb', default=None, help='Window starting PDB (phase 2)')
     p.add_argument('--prod-ns', type=float, default=10, help='US production length (ns)')
     a = p.parse_args()
 
