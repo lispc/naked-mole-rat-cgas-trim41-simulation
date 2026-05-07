@@ -96,7 +96,7 @@ To directly probe how 4mut affects the catalytic geometry of ubiquitin transfer,
 
 **4mut effect is a global rigid-body shift, not K315-specific.** Strikingly, the 4mut-induced distance reduction was nearly uniform across all cGAS lysines (Δ = −2 to −4 Å, Pearson r = −0.18 between WT distance and Δ). This indicates that 4mut repositions the entire cGAS molecule ~2-4 Å closer to the catalytic center via altered SPRY-cGAS interface geometry, rather than specifically optimizing K315.
 
-**PMF analysis** (preliminary, 5-8 ns per window). The drift direction of K315 within each US window directly reveals the free energy gradient. WT windows below 20 Å consistently drift upward (toward larger distances), while 4mut windows at 18-20 Å drift downward. The estimated PMF minimum is **21.4 Å for WT** and **17.7 Å for 4mut** — a 3.7 Å shift toward the catalytic center.
+**PMF analysis** (WHAM, 21 windows × 10 ns, 210 ns aggregate per system). The 1D potential of mean force along K315→UbG76 reveals a clear difference: **WT PMF minimum = 21.5 Å, 4mut PMF minimum = 19.0 Å** — a 2.5 Å shift toward the catalytic center. The free energy cost to bring K315 to 18 Å is 0.64 kcal/mol for WT vs 0.10 kcal/mol for 4mut (Δ = −0.54), and to 15 Å is 2.26 vs 1.15 kcal/mol (Δ = −1.11). Bootstrap error estimates (50 resamples) confirm the shift is statistically robust (F(15Å) error ±0.02–0.05 kcal/mol).
 
 **Catalytic geometry analysis.** Beyond the 1D distance, we assessed the K315 attack angle (NZ→CE vector relative to the Ub-G76 C direction) and E2~Ub conformational state (Table 5).
 
