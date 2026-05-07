@@ -77,11 +77,11 @@ def main():
     # Restraint 2: CC linker (RING C-term ↔ SPRY N-term)
     cc = mm.CustomBondForce("0.5*k_cc*max(0,r-cc_up)^2 + 0.5*k_cc*max(0,cc_lo-r)^2")
     cc.addGlobalParameter("k_cc", 100 * unit.kilojoules_per_mole / unit.nanometer ** 2)
-    cc.addGlobalParameter("cc_lo", 8.0 * unit.nanometer)
-    cc.addGlobalParameter("cc_up", 12.0 * unit.nanometer)
+    cc.addGlobalParameter("cc_lo", 4.0 * unit.nanometer)   # 40 Å (was 80)
+    cc.addGlobalParameter("cc_up", 10.0 * unit.nanometer)  # 100 Å (was 120)
     cc.addBond(1190, 5971, [])
     sys.addForce(cc)
-    log("R2 CC linker: RING1 C-term ↔ SPRY N-term  flat-bottom 80-120Å", lf)
+    log("R2 CC linker: RING1 C-term ↔ SPRY N-term  flat-bottom 40-100Å", lf)
 
     # Restraint 3: COM
     masses = [sys.getParticleMass(i).value_in_unit(unit.amu) for i in range(sys.getNumParticles())]
