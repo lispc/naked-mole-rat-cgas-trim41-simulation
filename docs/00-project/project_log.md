@@ -1759,5 +1759,80 @@ US 完成后：
 
 ---
 
-*最后更新：2026-05-08（US 完成、最终 PMF、项目收尾）*
+## §65. Claude Opus 4.7 评审后的验证实验 (2026-05-08)
+
+外部评审（`docs/40-reviews/claude-0508.md`）指出了三个核心问题：
+1. 计算-实验方向矛盾（4mut 改善催化几何 vs 实验削弱泛素化）
+2. 四元系统采样不足（1×50ns）
+3. US 10ns/窗偏弱
+
+针对问题 1，执行了 Route A（刚性化假说检验）和 Route B（DNA 结合态验证）。
+
+### 65.1 Route A：界面刚性化假说检验
+
+**目的**：Discussion 声称"4mut rigidifies SPRY-cGAS interface"——检验此假说。
+
+**方法**：对 6 条二元 MD 轨迹（WT×3 + 4mut×3，各 200ns）的 SPRY-cGAS 界面残基对计算 Cα 距离自相关函数，拟合指数衰减时间 τ。
+
+**结果**：
+- WT τ median = 16.0 ns, 4mut τ median = **11.8 ns**（p=0.015, Mann-Whitney）
+- 4mut 界面弛豫 **快 26%**——界面更动态，**不是更刚**
+- 接触寿命无显著差异（p=0.17）
+- **结论：刚性化假说被定量证伪**
+
+**影响**：Discussion §3 的"rigidification"解释没有证据支持。DCCM anti-correlation 增强（−0.13→−0.23）应解读为协同运动增强，而非刚性化。
+
+分析脚本：`scripts/03_analysis/analyze_interface_rigidity.py`
+输出：`data/analysis/rigidity_test/`
+
+### 65.2 Route B：cGAS+DNA 结合态 SPRY 结合面验证
+
+**目的**：检验 DNA 结合是否改变 cGAS-SPRY 界面和 K315 可及性。
+
+**方法**：分析 Boltz-2 cGAS+DNA+TRIM41 预测（5 个 model），映射 SPRY 结合面残基和 K315 位置。
+
+**关键发现**：
+- 在 **所有 5 个 model** 中，K315 距离 SPRY 最近原子 **36-49 Å**（model 2 除外：22.5 Å）
+- SPRY 在 DNA 结合态结合到 cGAS **C 端面**（残基 394-468），而非 apo 态的 N 端面
+- 最接近 SPRY 的 lysine 是 **K487、K501、K506**（C 端尾部），均非已知泛素化靶点
+- lab report 中"SPRY 近 K315"被证明是错误的——SPRY 近的是 C 端 lysine
+- AF3 预测的 apo cGAS 与 4LEZ DNA 结合态 cGAS 的 CA RMSD ~21 Å——构象差异巨大
+
+**文献交叉验证**（`docs/15-literature/人cGAS泛素化位点.md`）：
+- TRIM41 已知靶点是 **K347**（单泛素化，促二聚化）——非 K315
+- K347 在所有模型（apo 和 DNA 结合）中均远离 SPRY
+- K315 不是已知的 TRIM41 泛素化位点
+
+**结论**：
+1. apo 态 SPRY 结合 N 端 → K315 是几何唯一靶点（我们的 apo 模型）
+2. DNA 结合态 SPRY 结合 C 端 → K315 不可及（Boltz-2）
+3. 文献 TRIM41→K347——可能发生在 cGAS-DNA 二聚体或 trans-泛素化背景下
+4. 三条证据线一致表明：**apo 模型不适用于 DNA 结合态的实验条件**
+
+**三态模型**（新假说）：
+- **apo 态**：SPRY→N 端，K315 最优靶点，4mut 增强动力学+催化准备度
+- **DNA 单体态**：SPRY→C 端，K487/K501/K506 最近，K315/K347 均不可及
+- **DNA 二聚体态**（实验条件）：SPRY 结合面待定，K347 可能经链间机制可达
+
+脚本：`scripts/06_structure/check_boltz_k315.py`
+输出：终端（分析结果在 Route B 对话中）
+
+### 65.3 US 收敛性检查
+
+对 WT 和 4mut 的 17 个 US 窗口进行了 CV 均值稳定性、直方图重叠和 KS 检验：
+
+**结果**：
+- 相邻窗口直方图重叠全部 >0.05（WHAM 合法）
+- 多个窗口 CV 均值漂移 0.5-2.0 Å/10ns（系统性向短距离漂移）
+- KS 检验显示前后半分布差异（对大样本敏感）
+- 10 ns/窗**边际足够**——直方图重叠 OK 但漂移未完全收敛
+
+**建议**：发表前扩展到 20 ns/窗，并在 SI 中报告 block averaging 收敛曲线和有效样本量（ESS）。
+
+分析脚本：`scripts/03_analysis/check_us_convergence.py`
+输出：`data/analysis/us_convergence/`
+
+---
+
+*最后更新：2026-05-08（评审后验证实验完成）*
 *维护者：Claude Code CLI*
