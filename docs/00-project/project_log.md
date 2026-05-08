@@ -1841,18 +1841,26 @@ US 完成后：
 脚本：`scripts/03_analysis/analyze_allosteric_pathways.py`
 输出：`data/analysis/allosteric_pathways/`
 
-### 65.5 DNA 结合态 cGAS+SPRY MD（进行中）
+### 65.5 DNA 结合态 cGAS+SPRY MD ✅ 完成
 
-为验证 DNA 结合态的 SPRY-cGAS 界面稳定性，从 Boltz-2 model 0 提取 cGAS+SPRY 蛋白部分，用 OpenMM + PDBFixer 构建了溶剂化体系（167K atoms），在 GPU 0 上跑 50ns NVT production。
+为验证 DNA 结合态的 SPRY-cGAS 界面稳定性，从 Boltz-2 model 0 提取 cGAS+SPRY 蛋白部分，用 OpenMM + PDBFixer 构建溶剂化体系（167K atoms），GPU 0 跑 50ns NVT production。
 
-- 构建脚本：`scripts/01_build/build_cgas_dna_spry.py`
-- 运行脚本：`scripts/02_md/run_dna_spry_prod.py`
-- 输出：`data/md_runs/cgas_dna_spry_protein/WT_rep1/`
-- 速度：~108 ns/day，预计 2026-05-09 上午完成
+**结果**：
+- **界面稳定**：COM 距离 25.8→26.4 Å（50ns 内漂移 <1 Å），接触数 223→204（维持 >90%）
+- **SPRY 结合 C 端面**：与 Boltz-2 静态预测一致，最近 lysine 为 resid 425(13.7Å) 和 444(16.7Å)
+- **K315 不可及**：COM 距离 55.9 ± 1.0 Å，最近 SPRY 原子 36.5 ± 1.6 Å，且随时间轻微远离（54.9→57.5 Å）
+- cGAS RMSD 2.5-2.8 Å，SPRY 几乎不变，构象稳定
+
+**结论**：DNA 结合态的 SPRY-cGAS 界面在 MD 中稳定维持——与 apo 态的 N 端结合面根本不同。这是 Route B 的最终验证。
+
+构建脚本：`scripts/01_build/build_cgas_dna_spry.py`
+运行脚本：`scripts/02_md/run_dna_spry_prod.py`
+分析脚本：`scripts/03_analysis/analyze_dna_bound_md.py`
+输出：`data/md_runs/cgas_dna_spry_protein/WT_rep1/`，分析在 `data/analysis/dna_bound_md/`
 
 ---
 
-*最后更新：2026-05-08（评审后验证实验 + 变构路径分析完成）*
+*最后更新：2026-05-09（DNA 结合态 MD 完成，50ns 验证通过）*
 *维护者：Claude Code CLI*
 
 对 WT 和 4mut 的 17 个 US 窗口进行了 CV 均值稳定性、直方图重叠和 KS 检验：

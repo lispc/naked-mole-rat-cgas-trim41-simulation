@@ -101,6 +101,25 @@ Beyond the 1D distance, we assessed the K315 attack angle and found it strongly 
 | E2~Ub closed | 100% | 100% |
 | **K315<19Å + favorable angle** | **12.6%** | **53.7%** |
 
+### 2.8 DNA-Bound cGAS-SPRY Interface Is Stable but Structurally Distinct from Apo
+
+To test whether the SPRY binding interface observed in the Boltz-2 predictions (2.6) is maintained under MD, we simulated the DNA-bound cGAS+SPRY complex (without the RING-E2~Ub module) for 50 ns, starting from the Boltz-2 model 0 structure after removing DNA.
+
+The interface remained stable throughout: the cGAS-SPRY COM distance was 25.8 ± 0.4 Å (range 24.8–27.6 Å), CA-CA contacts averaged 213 ± 14 (range 180–250), and no dissociation was observed. cGAS backbone RMSD from the starting structure was 2.7 ± 0.4 Å, indicating minor conformational relaxation without unfolding. The SPRY domain remained essentially rigid (RMSD <0.5 Å).
+
+Critically, K315 remained 55.9 ± 1.0 Å from the SPRY COM (37 ± 2 Å minimum distance to any SPRY atom), drifting slightly further away over the trajectory (54.9 → 57.5 Å). The lysines closest to SPRY—residues 425 and 444 in the model numbering, corresponding to human cGAS K487 and K501—maintained distances of 14–18 Å, consistent with the static Boltz-2 analysis.
+
+**Table 6. DNA-bound MD summary (50 ns).**
+
+| Metric | Value |
+|--------|-------|
+| cGAS-SPRY COM distance | 25.8 ± 0.4 Å |
+| CA-CA contacts (<8 Å) | 213 ± 14 |
+| cGAS RMSD | 2.7 ± 0.4 Å |
+| K315→SPRY COM | 55.9 ± 1.0 Å |
+| K315→SPRY minimum | 36.5 ± 1.6 Å |
+| Closest Lys→SPRY | 425 (13.9 Å), 444 (17.5 Å) |
+
 ---
 
 ## 3. Discussion
@@ -126,7 +145,7 @@ To identify the residue-level communication routes, we constructed dynamical net
 
 ### 3.3 The apo/DNA-bound Conformational Gap
 
-Our computational model is based on apo cGAS. In the cellular context, however, cGAS is predominantly DNA-bound and dimeric. To assess whether DNA binding alters the SPRY-cGAS interface, we analyzed five Boltz-2 model structures of cGAS+DNA+TRIM41^SPRY. In all five models, SPRY binds to a **C-terminal face of cGAS** (residues ~390–468 in the predicted structure) rather than the N-terminal face observed in the apo docking. K315 is 36–49 Å from the nearest SPRY atom (4 out of 5 models), making it inaccessible in the DNA-bound conformation. The lysines closest to SPRY in the DNA-bound state (K487, K501, K506 in the human sequence) are C-terminal tail residues not previously reported as ubiquitination targets.
+Our computational model is based on apo cGAS. In the cellular context, however, cGAS is predominantly DNA-bound and dimeric. To assess whether DNA binding alters the SPRY-cGAS interface, we analyzed five Boltz-2 model structures of cGAS+DNA+TRIM41^SPRY and validated the prediction with 50 ns MD. In all five static models and throughout the MD trajectory, SPRY binds to a **C-terminal face of cGAS** (residues ~390–468 in the predicted structure) rather than the N-terminal face observed in the apo docking. The interface is stable (COM 25.8 Å, contacts ~213, no dissociation over 50 ns). K315 is 36–49 Å from the nearest SPRY atom in the static models and 36.5 ± 1.6 Å in MD, making it inaccessible in the DNA-bound conformation. The lysines closest to SPRY in the DNA-bound state (K487, K501 in the human sequence) are C-terminal tail residues not previously reported as ubiquitination targets.
 
 The TRIM41 literature identifies **K347**—not K315—as the primary monoubiquitination site that promotes cGAS dimerization on DNA [10,11]. K347 is inaccessible in both our apo model (~59 Å from SPRY) and the Boltz-2 DNA-bound models, suggesting it may be targeted in a dimeric or trans-ubiquitination context not captured by either model.
 
@@ -182,9 +201,9 @@ MDAnalysis 2.10.0; MMPBSA.py (AmberTools 24, GB-OBC II, igb=5); correlated t-tes
 
 Cα distance autocorrelation functions were computed for all SPRY-cGAS interface residue pairs (heavy-atom distance <5 Å in first frame) across all 6 binary trajectories (3 WT + 3 4mut, 200 ns each). Autocorrelation functions were fitted to single-exponential decay ACF(t) = exp(−t/τ) over 0–50 ns, with τ accepted when R² > 0.3. Distributions were compared by Mann-Whitney U test (two-sided and one-sided).
 
-### 4.7 DNA-Bound Interface Mapping (Route B)
+### 4.7 DNA-Bound Interface Mapping and MD (Route B)
 
-Five Boltz-2 model structures of cGAS+DNA+TRIM41^SPRY were analyzed with gemmi. K315 was identified by sequence context (SASKMLSKFRK motif). SPRY-cGAS interface residues were defined by heavy-atom distance <5 Å. Lysine-SPRY distances were measured from NZ atoms to the nearest SPRY heavy atom.
+Five Boltz-2 model structures of cGAS+DNA+TRIM41^SPRY were analyzed with gemmi. K315 was identified by sequence context (SASKMLSKFRK motif). SPRY-cGAS interface residues were defined by heavy-atom distance <5 Å. Lysine-SPRY distances were measured from NZ atoms to the nearest SPRY heavy atom. For MD validation, DNA was stripped from the Boltz-2 model 0 and the protein-only system (cGAS + SPRY, 686 residues) was built with PDBFixer, solvated with TIP4P-Ew water in a truncated octahedron (~167K atoms, 0.15 M NaCl), and simulated for 50 ns under the same conditions as §4.2 (ff19SB + tip4pew, 300 K, 2 fs, NVT).
 
 ### 4.8 Allosteric Pathway Identification (P1-5)
 
