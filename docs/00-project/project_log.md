@@ -1817,7 +1817,43 @@ US 完成后：
 脚本：`scripts/06_structure/check_boltz_k315.py`
 输出：终端（分析结果在 Route B 对话中）
 
-### 65.3 US 收敛性检查
+### 65.4 P1-5：变构路径识别
+
+**目的**：识别从 4mut 位点到 N 端界面的具体残基级通信路径。
+
+**方法**：对 6 条二元 MD 轨迹构建残基接触图（CA-CA <8 Å, >50% 帧）+ DCCM 加权网络，用 NetworkX shortest path 找 4mut 位点→N 端界面的最低阻力路径。
+
+**关键发现**：
+
+- **4mut 通信更分散**：涉及 95 个残基 vs WT 69 个
+- **4mut 路径更长**：mean 1.07 vs 0.80（−log|correlation| 加权）
+- **Hub 残基变化**（top 30, PDB→全长 cGAS）：
+  - WT 独有：475/476/477（紧邻 L495Y）、499/503/504（紧邻 K498T）——走 C 端走廊
+  - 4mut 独有：**221（N 端界面！）**、430（D431S 位点）、460/464（K479E 附近）
+- **Per-突变共识路径减少**：
+  - K479E：WT 5 个共识残基 → 4mut 仅 1 个
+  - L495Y：WT 5 → 4mut 2
+  - K498T：WT 5 → 4mut 3
+  - D431S：WT 4 → 4mut 2
+
+**解读**：WT 的变构通信走明确的 C 端"高速公路"（494-496→518-526）。4mut 打乱了这些通路，N 端界面残基 221 直接成为 hub——界面不再被动接收信号，而是主动参与通信网络。这与 Route A 的 τ 缩短（16→12 ns）互相印证。
+
+脚本：`scripts/03_analysis/analyze_allosteric_pathways.py`
+输出：`data/analysis/allosteric_pathways/`
+
+### 65.5 DNA 结合态 cGAS+SPRY MD（进行中）
+
+为验证 DNA 结合态的 SPRY-cGAS 界面稳定性，从 Boltz-2 model 0 提取 cGAS+SPRY 蛋白部分，用 OpenMM + PDBFixer 构建了溶剂化体系（167K atoms），在 GPU 0 上跑 50ns NVT production。
+
+- 构建脚本：`scripts/01_build/build_cgas_dna_spry.py`
+- 运行脚本：`scripts/02_md/run_dna_spry_prod.py`
+- 输出：`data/md_runs/cgas_dna_spry_protein/WT_rep1/`
+- 速度：~108 ns/day，预计 2026-05-09 上午完成
+
+---
+
+*最后更新：2026-05-08（评审后验证实验 + 变构路径分析完成）*
+*维护者：Claude Code CLI*
 
 对 WT 和 4mut 的 17 个 US 窗口进行了 CV 均值稳定性、直方图重叠和 KS 检验：
 
