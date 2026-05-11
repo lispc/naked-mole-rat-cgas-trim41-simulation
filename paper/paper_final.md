@@ -147,7 +147,7 @@ To identify the residue-level communication routes, we constructed dynamical net
 
 Our computational model is based on apo cGAS. In the cellular context, however, cGAS is predominantly DNA-bound and dimeric. To assess whether DNA binding alters the SPRY-cGAS interface, we analyzed five Boltz-2 model structures of cGAS+DNA+TRIM41^SPRY and validated the prediction with 50 ns MD. In all five static models and throughout the MD trajectory, SPRY binds to a **C-terminal face of cGAS** (residues ~390–468 in the predicted structure) rather than the N-terminal face observed in the apo docking. The interface is stable (COM 25.8 Å, contacts ~213, no dissociation over 50 ns). K315 is 36–49 Å from the nearest SPRY atom in the static models and 36.5 ± 1.6 Å in MD, making it inaccessible in the DNA-bound conformation. The lysines closest to SPRY in the DNA-bound state (K487, K501 in the human sequence) are C-terminal tail residues not previously reported as ubiquitination targets.
 
-The TRIM41 literature identifies **K347**—not K315—as the primary monoubiquitination site that promotes cGAS dimerization on DNA [10,11]. K347 is inaccessible in both our apo model (~59 Å from SPRY) and the Boltz-2 DNA-bound models, suggesting it may be targeted in a dimeric or trans-ubiquitination context not captured by either model.
+TRIM56 has experimentally established K347 (murine K335) as the monoubiquitination site that promotes cGAS dimerization on DNA [10]. However, **no study has mapped the TRIM41 ubiquitination site on cGAS** [11]. In our apo-state quaternary model, **K315 is the only lysine geometrically accessible** to the TRIM41 RING-E2~Ub catalytic center, while K347 remains >50 Å away in both apo and DNA-bound conformations. K347 may be targeted in a dimeric or trans-ubiquitination context not captured by our model, or TRIM41 may recognize a different lysine in the DNA-bound state.
 
 ### 3.4 Reconciling the Computational-Experimental Paradox
 
@@ -252,5 +252,5 @@ Despite these caveats, the robust dissociation signal (all 3 replicas, ~1.2 μs 
 7. Pruneda, J. N. et al. *Mol. Cell* **2012**, 47, 933–942.
 8. Dou, H. et al. *Nat. Struct. Mol. Biol.* **2012**, 19, 184–192.
 9. Liu, J.; Nussinov, R. *PLoS Comput. Biol.* **2011**, 7, e1002173.
-10. Seo, G. J. et al. *Cell Rep.* **2018**, 23, 1111–1121.
-11. Liu, Z. S. et al. *Nat. Immunol.* **2021**, 22, 591–602.
+10. Seo, G. J. et al. *Nat. Commun.* **2018**, 9, 613.
+11. Liu, Z. S. et al. *Cell Biosci.* **2018**, 8, 35.
