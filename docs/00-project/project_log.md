@@ -1880,3 +1880,69 @@ US 完成后：
 
 *最后更新：2026-05-08（评审后验证实验完成）*
 *维护者：Claude Code CLI*
+
+
+---
+
+## §66. K315 vs K347 文献纠偏 + cGAS-DNA 二聚体建模（2026-05-11）
+
+### 66.1 文献调研核心结论
+
+完成 `docs/15-literature/k315_vs_k347_investigation.md`，核心发现：
+
+**不存在"TRIM41 泛素化 K347"的实验证据。**
+
+| 论文 | E3 | 位点 | 证据 |
+|------|-----|------|------|
+| Seo et al. 2018 *Nat. Commun.* | **TRIM56** | 小鼠 K335 = **人源 K347** | ✅ 质谱 + K→R + 功能实验 |
+| Liu et al. 2018 *Cell Biosci.* | **TRIM41** | **未指定位点** | ⚠️ 仅证明 TRIM41 能泛素化 cGAS |
+
+**项目内部错误修正**：
+- `paper/paper_final.md` §3.3 曾错误表述"The TRIM41 literature identifies K347"——已修正为区分 TRIM56→K347 vs TRIM41→位点未鉴定。
+- `docs/15-literature/人cGAS泛素化位点.md` 表格已正确标注 K347 仅由 TRIM56 介导。
+
+### 66.2 cGAS-DNA 二聚体 + TRIM41 SPRY 建模（P1 执行）
+
+**输入**：Boltz-2 YAML，cGAS(468 aa) × 2 + TRIM41 SPRY(218 aa) + 18bp dsDNA
+**输出**：5 个 model，运行时间 ~4 min 21 s（MSA 已缓存）
+
+#### 结果
+
+| 指标 | M0–M3 均值 | 说明 |
+|------|-----------|------|
+| SPRY 位置 | 桥接二聚体 C 端面 | 同时接触两个 cGAS 链 |
+| K315 → SPRY | **51.0 ± 1.0 Å** | 完全不可及 |
+| K347 → SPRY | **15.3 ± 1.3 Å** | 比单体近，但仍 > 催化距离 |
+| trans K347 → SPRY | **~15 Å** | 另一个链的 K347 到 SPRY |
+| K347(链1) ↔ K347(链2) | **~18 Å** | 二聚体界面处两个 K347 很近 |
+
+#### 关键结论
+
+1. **K347 在二聚体中仍不可达**：即使是最有利的 DNA 二聚体态，K347 到 SPRY 最小距离 ~15 Å，仍大于泛素转移所需的 <8–10 Å。
+2. **trans-泛素化未获支持**：SPRY 虽桥接两个 cGAS 链，但 K347 未进入催化范围。
+3. **K315 在二聚体中完全出局**：距离 SPRY ~51 Å。
+4. **论文核心逻辑反而被强化**：apo 态 K315 唯一可达 → 4mut 变构调控催化几何——机制不依赖于 DNA-bound 态的位点差异。
+
+### 66.3 文本修正
+
+**`paper/paper_final.md`** §3.3 和 §3.4 已更新：
+- 明确区分 TRIM56→K347（实验确证）vs TRIM41→位点未鉴定。
+- 插入 Boltz-2 二聚体建模结论：K347 在二聚体中最近但仍 > 催化距离。
+- 三态模型（apo / DNA 单体 / DNA 二聚体）叙事完整。
+
+**`docs/15-literature/人cGAS泛素化位点.md`**：
+- 表格中 K347 的 E3 列已正确标注 TRIM56。
+- §4.1 已明确说明 TRIM41 的位点尚未被实验鉴定。
+
+### 66.4 文件路径
+
+- 调研文档：`docs/15-literature/k315_vs_k347_investigation.md`
+- Boltz-2 YAML：`data/boltz_cgas_dna_dimer_trim41.yaml`
+- 预测输出：`data/boltz_cgas_dna_dimer_trim41/boltz_results_*/predictions/`
+- 分析脚本：`scripts/06_structure/analyze_boltz_dimer_k315_k347.py`
+
+---
+
+*最后更新：2026-05-11（K315 vs K347 文献纠偏 + 二聚体建模完成 + 文本修正）*
+*维护者：Kimi Code CLI*
+

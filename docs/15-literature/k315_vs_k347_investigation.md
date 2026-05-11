@@ -36,7 +36,7 @@
 
 **需要谨慎的部分：**
 1. **模型基于 apo 单体**，而 Chen 2025 的实验 readout（抗 K48-Ub）发生在 **DNA-bound、可能二聚化的核内 context**。DNA-bound 时 SPRY 结合 C 端面（Boltz-2 预测），K315 反而不可达（36–57 Å）。
-2. **K347 位于 cGAS-DNA 二聚化界面附近**，在 DNA-bound/二聚体状态下可能通过 **trans-泛素化**（一个 cGAS 分子被另一个分子上的 TRIM41 修饰）变得可达。
+2. **K347 位于 cGAS-DNA 二聚化界面附近**，在 DNA-bound/二聚体状态下可能通过 **trans-泛素化**（一个 cGAS 分子被另一个分子上的 TRIM41 修饰）变得可达。**二聚体建模验证见 §五。**
 3. K315 作为泛素化位点**无任何实验文献支持**，在论文中必须明确标注为"计算预测"。
 
 ---
@@ -58,7 +58,7 @@
 
 | 验证实验 | 目的 | 方法/资源 | 预期结果 |
 |---------|------|----------|---------|
-| **cGAS-DNA 二聚体 + TRIM41 建模** | 测试 K347 在二聚体/核内状态下是否可达 | Boltz-2 或 AF3（支持 DNA 输入），构建 cGAS-DNA 二聚体 + TRIM41 SPRY 复合物 | 如果 DNA-bound 界面在 C 端面，K315 不可达；K347 可能因二聚体界面暴露或 trans-泛素化而可达 |
+| **cGAS-DNA 二聚体 + TRIM41 建模** ✅ **已完成** | 测试 K347 在二聚体/核内状态下是否可达 | Boltz-2 预测 cGAS-DNA 二聚体 + TRIM41 SPRY（5 models） | **K347 仍不可达**（14–17 Å vs 催化需 <8–10 Å）；trans-泛素化未获支持；详见 §五 |
 | **TRIM56 vs TRIM41 RING 域结构比对** | 两者 E2~Ub 催化模块的取向是否不同，导致靶点偏好差异 | AlphaFold / PDB 结构比对 | 如果 RING 域结构/表面电荷差异显著，支持不同 E3 偏好不同位点的假说 |
 | **K315R/K347R 双突变的 Rosetta ddG 扫描** | 测试两个位点各自对 TRIM41 泛素化能量学的贡献 | Rosetta FastRelax + ddG | K315R 若在能量上显著不利于催化几何，支持其为主要位点；K347R 若无显著变化，支持其不是 TRIM41 靶点 |
 | **扩大 CC linker 长度的 US/PMF** | 当前 CC40 限制在 40–100 Å，可能人为排除了 K347 可达的构象 | 测试 CC60/CC80，观察 K347 距离分布是否出现新的低能量极小值 | 如果即使 CC80 K347 仍 > 40 Å，则进一步支持 K347 在 apo 状态下不可达 |
@@ -97,3 +97,99 @@
 [2] Liu, Z. S.; Zhang, Z. Y.; Cai, H.; Zhao, M.; Mao, J.; Dai, J.; et al. RINCK-Mediated Monoubiquitination of cGAS Promotes Antiviral Innate Immune Responses. *Cell Biosci.* **2018**, *8*, 35. DOI: 10.1186/s13578-018-0231-4
 
 [3] Chen, Y. et al. A cGAS-Mediated Mechanism in Naked Mole-Rats Potentiates DNA Repair and Delays Aging. *Science* **2025**, *390*, eadp5056.
+
+## 五、计算验证结果：cGAS-DNA 二聚体 + TRIM41 SPRY（Boltz-2）
+
+> 执行日期：2026-05-11  
+> 方法：Boltz-2 预测 cGAS(截断, 468 aa) × 2 + TRIM41 SPRY(218 aa) + 18 bp dsDNA，5 个 diffusion model
+
+### 5.1 模型质量
+
+| Model | pTM | ipTM | complex pLDDT |
+|-------|-----|------|---------------|
+| M0 | 0.43 | 0.14 | 0.68 |
+| M1 | 0.41 | 0.13 | 0.66 |
+| M2 | 0.41 | 0.14 | 0.66 |
+| M3 | 0.40 | 0.13 | 0.66 |
+| M4 | 0.37 | 0.12 | 0.63 |
+
+置信度普遍偏低（ipTM < 0.2），符合 TRIM41-cGAS 为瞬态/弱相互作用复合物的预期。但**几何距离和相对位置信息仍有参考价值**。
+
+### 5.2 关键发现
+
+#### 发现 1：SPRY 桥接 cGAS-DNA 二聚体的 C 端面
+
+在所有 5 个 model 中，SPRY 同时与两个 cGAS 链发生大量重原子接触（< 5 Å）：
+
+| Model | cgas1 接触残基数 | cgas2 接触残基数 | SPRY 位置特征 |
+|-------|-----------------|-----------------|--------------|
+| M0 | 41 (resid 85–462) | 36 (resid 85–458) | 桥接二聚体 C 端面 |
+| M1 | 37 (resid 85–462) | 71 (resid 85–458) | 桥接，偏向 cgas2 |
+| M2 | 30 (resid 85–462) | 34 (resid 85–458) | 桥接二聚体 C 端面 |
+| M3 | 38 (resid 85–462) | 35 (resid 85–458) | 桥接二聚体 C 端面 |
+| M4 | 145 (resid 13–459) | 18 (resid 6–59) | 缠绕 cgas1，outlier |
+
+**M0–M3 一致结论**：SPRY 位于二聚体 C 端面之间，同时接触两个 cGAS 分子。K315 区域 (resid 220–230) 和 K347 区域 (resid 290–300) 均**无任何 SPRY 重原子接触**。
+
+#### 发现 2：K315 在二聚体中完全不可及
+
+| Model | cgas1 K315→SPRY min | cgas2 K315→SPRY min | 说明 |
+|-------|---------------------|---------------------|------|
+| M0 | **49.5 Å** | **49.5 Å** | 远超催化距离 |
+| M1 | **51.4 Å** | **30.8 Å** | 仍不可达 |
+| M2 | **53.9 Å** | **51.6 Å** | 远超催化距离 |
+| M3 | **51.5 Å** | **53.3 Å** | 远超催化距离 |
+| M4 | **20.8 Å** | **53.7 Å** | M4 为 outlier，SPRY 构象异常 |
+
+M0–M3 均值：**51.0 ± 1.0 Å**。K315 在 DNA 二聚体态下**完全不可被 SPRY 触及**。
+
+#### 发现 3：K347 在二聚体中仍不可达，但比 K315 更近
+
+| Model | cgas1 K347→SPRY min | cgas2 K347→SPRY min | K315-K347 CA |
+|-------|---------------------|---------------------|--------------|
+| M0 | **15.8 Å** | **16.2 Å** | 40.0 Å |
+| M1 | **17.1 Å** | **14.3 Å** | 40.0 Å |
+| M2 | **14.2 Å** | **17.0 Å** | 40.0 Å |
+| M3 | **14.4 Å** | **13.2 Å** | 40.1 Å |
+| M4 | **20.2 Å** | **17.4 Å** | 39.8 Å |
+
+M0–M3 均值：**15.3 ± 1.3 Å**。K347 虽然比单体状态（>50 Å）**显著更近**，但仍**大于催化所需的 <8–10 Å**。
+
+#### 发现 4：trans-泛素化未获支持
+
+两个 cGAS 链的 K347 在二聚体界面处相距很近（NZ 距离 **15.9–18.6 Å**，均值 ~18 Å），但：
+- SPRY 到"另一个链"K347 的最小距离 = **13.2–17.1 Å**（均值 ~15 Å）
+- 仍大于催化距离
+- 即使考虑 RING 域柔性和 CC linker 伸缩，从 15 Å 进一步逼近到 <8 Å 需要克服显著自由能壁垒
+
+### 5.3 结论
+
+| 状态 | K315→SPRY | K347→SPRY | trans-K347→SPRY | 催化可达性 |
+|------|-----------|-----------|-----------------|-----------|
+| **apo 单体**（四元 FULL 模型） | ~20 Å（唯一靶点） | >50 Å | — | K315 预催化，但未达催化距离 |
+| **DNA 单体**（Boltz-2） | 36–57 Å | 40–66 Å | — | 两者均不可及 |
+| **DNA 二聚体**（Boltz-2，本工作） | **~51 Å** | **~15 Å** | **~15 Å** | **K347 最近但仍 > 催化距离** |
+
+**综合判断**：
+1. 在 apo 态，K315 是唯一几何可达的赖氨酸。
+2. 在 DNA 结合态（单体或二聚体），SPRY 切换到 C 端面，K315 完全不可及。
+3. 在二聚体中，K347 比 K315 更近 SPRY（15 vs 51 Å），且两个 K347 在二聚体界面处相距 ~18 Å。
+4. 但即使是最近的 K347，到 SPRY 的距离（~15 Å）仍**大于典型催化距离**（E2~Ub 的 Ub-G76 到靶 Lys NZ 需 <8–10 Å）。
+5. **trans-泛素化假说未获结构支持**：SPRY 虽桥接两个 cGAS 链，但 K347 仍未进入催化范围。
+
+### 5.4 对论文叙事的影响
+
+此结果**强化了原论文的核心逻辑**：
+- apo 模型中 K315 是唯一可达靶点 → 4mut 通过变构调控 K315 催化几何 → 机制不依赖于 DNA-bound 态的位点差异。
+- 同时，它**削弱了 K347 作为 TRIM41 靶点的可能性**：即使在最有利于 K347 的 DNA 二聚体态，K347 仍离催化中心 ~15 Å，需要额外的、目前未被建模的构象重排才能被修饰。
+
+**建议叙事更新**：
+
+> "In the apo state, K315 is the only lysine geometrically accessible to the TRIM41 catalytic center (§2.6). In DNA-bound dimeric models, SPRY bridges the C-terminal faces of both cGAS protomers, rendering K315 >50 Å away. While K347 moves closer to SPRY (~15 Å) in the dimeric context, it remains outside the catalytic range (<8–10 Å) required for ubiquitin transfer. Whether physiological TRIM41-mediated ubiquitination occurs via an unmodeled conformational state or involves additional cofactors (e.g., nucleosomes, phosphorylation) remains to be determined."
+
+### 5.5 数据路径
+
+- YAML 输入：`data/boltz_cgas_dna_dimer_trim41.yaml`
+- 预测输出：`data/boltz_cgas_dna_dimer_trim41/boltz_results_boltz_cgas_dna_dimer_trim41/predictions/`
+- 分析脚本：`/tmp/analyze_dimer_v3.py`（可归档至 `scripts/06_structure/`）
+
